@@ -1,3 +1,4 @@
+from typing import List, Tuple, Any
 from src.gaze_net import GazeNet
 from src.calibration_agent import CalibrationAgent
 
@@ -8,21 +9,21 @@ class GazeEstimationEngine:
         self.gaze_net = gaze_net
         self.cal_agent = cal_agent
 
-    def run_calibration_steps(self, cal_steps : int = 9):
+    def run_calibration_steps(self, calibration_data : List[Tuple[int, int, Any]]):
 
         t = 0
 
-        for i in range(cal_steps):
+        for calibration_data in calibration_data:
             
-            x_target, y_target = 0, 0
+            x_target, y_target = calibration_data[0], calibration_data[1]
 
-            image = "uhoh"  #! How do we get an image from inside the loop?
+            image = calibration_data[2]
 
             x, y, theta, phi = self.gaze_net.predict_gaze_vector(image)
             
             t += self.cal_agent.calibration_step(x, y, theta, phi, x_target, y_target)
         
-        t /= cal_steps
+        t /= len(calibration_data)
 
         self.cal_agent.t = t  #! Use a setter here as opposed to accessing attribute directly.
 
