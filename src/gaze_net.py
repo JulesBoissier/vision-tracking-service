@@ -1,17 +1,40 @@
-def mock_gaze_net(image):
-    
-    import random
+import warnings
 
-    x = random.randint(0, 100) / 100
-    y = random.randint(0, 100) / 100
-    theta = random.randint(0, 180)
-    phi = random.randint(0, 180)
+import torch
+from l2cs import Pipeline
 
-    return x, y, theta, phi
+warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    message=r"You are using `torch.load` with `weights_only=False`.*",
+)
 
-class GazeNet:  #? A wrapper to multiple nets?
+class GazeNet: 
     def __init__(self, filepath):
-        pass
+        self.gaze_pipeline = Pipeline(
+        weights=filepath,
+        arch='ResNet50',
+        device=torch.device('cpu')  # or 'gpu'
+    )
+    @staticmethod
+    def find_boundind_box_center(bounding_box, image_width):
+
+        x_min, y_min, x_max, y_max = bounding_box[0], bounding_box[1], bounding_box[2], bounding_box[3]
+        
+        x_center = image_width - (x_min + x_max) / 2  # Inverting x axis.
+        y_center = (y_min + y_max) / 2
+
+        return x_center, y_center  # Inverting y axis.
 
     def predict_gaze_vector(self, image):
-        return mock_gaze_net(image)
+        try:
+            result = self.gaze_pipeline.step(image)  # With image being _, image = cap.read()
+        except ValueError:
+            print("No face detected.")
+            return None, None, None, None
+
+        bounding_box = result.bboxes[0]
+        image_width = image.shape[1]
+        x, y = self.find_boundind_box_center(bounding_box, image_width)
+
+        return result.pitch, result.yaw, x, y
