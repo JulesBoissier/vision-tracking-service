@@ -1,6 +1,6 @@
 from typing import List, Tuple, Any
 from src.gaze_net import GazeNet
-from src.calibration_agent import CalibrationAgent
+from src.calibration_agents import CalibrationAgent
 
 
 class GazeEstimationEngine:
@@ -31,5 +31,5 @@ class GazeEstimationEngine:
 
     def predict_gaze_position(self, image):
         x, y, theta, phi = self.gaze_net.predict_gaze_vector(image)
-        screen_n, screen_x, screen_y = self.calculate_point_of_regard(x, y, theta, phi)
+        screen_n, screen_x, screen_y = self.cal_agent.calculate_point_of_regard(x, y, theta, phi)
         return screen_n, screen_x, screen_y

@@ -37,4 +37,4 @@ class GazeNet:
         image_width = image.shape[1]
         x, y = self.find_boundind_box_center(bounding_box, image_width)
 
-        return result.pitch, result.yaw, x, y
+        return x, y, result.pitch[0], result.yaw[0]
