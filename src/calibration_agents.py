@@ -1,13 +1,29 @@
+from abc import ABC, abstractmethod
 import math
 import numpy as np
 
+class CalibrationAgent(ABC):
+    @abstractmethod
+    def create_profile(self):
+        pass
 
-class CalibrationAgent:
+    @abstractmethod
+    def load_profile(self):
+        pass
+    
+    @abstractmethod
+    def calculate_point_of_regard(self):
+        pass
+
+
+
+class PreciseCalibrationAgent(CalibrationAgent):
 
     def __init__(self, db_path):
-        
-        self.t = 1
 
+        raise NotImplementedError
+    
+        self.t = 1
         self.screen_params = {
             'X_screen': -0.3,  # Top-left corner (X) in meters
             'Y_screen': 0.2,  # Top-left corner (Y) in meters
@@ -54,9 +70,3 @@ class CalibrationAgent:
         screen_x = ((por_x - self.screen_params['X_screen']) / self.screen_params['W_screen']) * self.screen_params['W_pixels']
         screen_y = -((por_y - self.screen_params['Y_screen']) / self.screen_params['H_screen']) * self.screen_params['H_pixels']
         return screen_x, screen_y
-
-
-
-    def calibrate_point_of_regard(self, uncal_por, kappa):  #Should be self.kappa
-        #* Differ with uncal_por by a minimal angle kappa
-        pass #! Visual Axis instead of Optical Axis
