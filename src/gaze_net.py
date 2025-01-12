@@ -1,5 +1,6 @@
 import warnings
 from typing import Tuple
+
 import torch
 from l2cs import Pipeline
 
@@ -8,6 +9,7 @@ warnings.filterwarnings(
     category=FutureWarning,
     message=r"You are using `torch.load` with `weights_only=False`.*",
 )
+
 
 class GazeNet:
     """
@@ -23,12 +25,14 @@ class GazeNet:
         """
         self.gaze_pipeline = Pipeline(
             weights=filepath,
-            arch='ResNet50',
-            device=torch.device('cpu')  # Use 'gpu' if available
+            arch="ResNet50",
+            device=torch.device("cpu"),  # Use 'gpu' if available
         )
 
     @staticmethod
-    def find_bounding_box_center(bounding_box: list, image_width: int) -> Tuple[float, float]:
+    def find_bounding_box_center(
+        bounding_box: list, image_width: int
+    ) -> Tuple[float, float]:
         """
         Calculate the center of the bounding box.
 
@@ -44,7 +48,9 @@ class GazeNet:
         y_center = (y_min + y_max) / 2
         return x_center, y_center
 
-    def predict_gaze_vector(self, image: torch.Tensor) -> Tuple[float, float, float, float]:
+    def predict_gaze_vector(
+        self, image: torch.Tensor
+    ) -> Tuple[float, float, float, float]:
         """
         Predict the gaze vector for a given image.
 

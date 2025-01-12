@@ -1,13 +1,15 @@
-from typing import List, Tuple
-from abc import ABC, abstractmethod
 import math
+from abc import ABC, abstractmethod
+from typing import List, Tuple
 
 from calibration_map import CalibrationMap
+
 
 class CalibrationAgent(ABC):
     """
     Abstract base class for calibration agents.
     """
+
     @abstractmethod
     def create_profile(self):
         """Create a new calibration profile."""
@@ -19,7 +21,9 @@ class CalibrationAgent(ABC):
         pass
 
     @abstractmethod
-    def calculate_point_of_regard(self, theta: float, phi: float) -> Tuple[float, float]:
+    def calculate_point_of_regard(
+        self, theta: float, phi: float
+    ) -> Tuple[float, float]:
         """
         Calculate the point of regard on the screen.
 
@@ -31,6 +35,7 @@ class CalibrationAgent(ABC):
             Tuple[float, float]: Screen coordinates (x, y).
         """
         pass
+
 
 class NaiveCalibrationAgent(CalibrationAgent):
     """
@@ -65,7 +70,12 @@ class NaiveCalibrationAgent(CalibrationAgent):
         """
         self.calibration_map.add_calibration_point(x, y, theta, phi)
 
-    def _interpolate(self, angle: float, calibration_coordinates: List[float], calibration_angles: List[float]) -> float:
+    def _interpolate(
+        self,
+        angle: float,
+        calibration_coordinates: List[float],
+        calibration_angles: List[float],
+    ) -> float:
         """
         Interpolate the screen coordinate based on calibration data.
 
@@ -78,12 +88,16 @@ class NaiveCalibrationAgent(CalibrationAgent):
             float: Interpolated screen coordinate.
         """
         epsilon = 1e-6
-        distances = [math.sqrt((angle - calib_angle) ** 2) for calib_angle in calibration_angles]
+        distances = [
+            math.sqrt((angle - calib_angle) ** 2) for calib_angle in calibration_angles
+        ]
         weights = [1 / (distance + epsilon) for distance in distances]
         numerator = sum(w * coord for w, coord in zip(weights, calibration_coordinates))
         return numerator / sum(weights)
 
-    def calculate_point_of_regard(self, theta: float, phi: float) -> Tuple[float, float]:
+    def calculate_point_of_regard(
+        self, theta: float, phi: float
+    ) -> Tuple[float, float]:
         """
         Calculate the screen coordinates for a given gaze angle.
 
@@ -94,6 +108,10 @@ class NaiveCalibrationAgent(CalibrationAgent):
         Returns:
             Tuple[float, float]: Screen coordinates (x, y).
         """
-        x_screen = self._interpolate(theta, self.calibration_map.x_values, self.calibration_map.theta_values)
-        y_screen = self._interpolate(phi, self.calibration_map.y_values, self.calibration_map.phi_values)
+        x_screen = self._interpolate(
+            theta, self.calibration_map.x_values, self.calibration_map.theta_values
+        )
+        y_screen = self._interpolate(
+            phi, self.calibration_map.y_values, self.calibration_map.phi_values
+        )
         return x_screen, y_screen

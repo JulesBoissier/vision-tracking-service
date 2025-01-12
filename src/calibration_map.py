@@ -1,17 +1,21 @@
-from typing import List
 from dataclasses import dataclass, field
+from typing import List
+
 
 @dataclass
 class CalibrationMap:
     """
     A data class to store calibration points.
     """
+
     x_values: List[float] = field(default_factory=list)
     y_values: List[float] = field(default_factory=list)
     theta_values: List[float] = field(default_factory=list)
     phi_values: List[float] = field(default_factory=list)
 
-    def add_calibration_point(self, x_value: float, y_value: float, theta_value: float, phi_value: float):
+    def add_calibration_point(
+        self, x_value: float, y_value: float, theta_value: float, phi_value: float
+    ):
         """
         Add a calibration point to the map.
 
