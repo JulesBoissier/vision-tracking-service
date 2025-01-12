@@ -7,6 +7,7 @@ filelock==3.16.1
 fonttools==4.55.3
 fsspec==2024.12.0
 identify==2.6.5
+iniconfig==2.0.0
 Jinja2==3.1.5
 kiwisolver==1.4.8
 l2cs @ git+https://github.com/edavalosanaya/L2CS-Net.git@4a0f978d5b4c426a7d37022d8c927d6ea031dcb6
@@ -33,8 +34,10 @@ packaging==24.2
 pandas==2.2.3
 pillow==11.1.0
 platformdirs==4.3.6
+pluggy==1.5.0
 pre_commit==4.0.1
 pyparsing==3.2.1
+pytest==8.3.4
 python-dateutil==2.9.0.post0
 pytz==2024.2
 PyYAML==6.0.2
