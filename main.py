@@ -2,7 +2,7 @@ import os
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, File, UploadFile
 
 from src.calibration_agents import NaiveCalibrationAgent
 from src.gaze_estimation_engine import GazeEstimationEngine
@@ -47,9 +47,13 @@ def save_current_profile():
     pass
 
 
-@app.get("/predict")
-def predict_point_of_regard():
-    image = 0
+@app.post("/predict")
+async def predict_point_of_regard(
+    file: UploadFile = File(...),  # Accept the uploaded image
+):
+    # image = 0
+    # Read the uploaded file's content
+    image = await file.read()
     gaze_engine = resources.get("gaze_engine")
     return gaze_engine.predict_gaze_position(image)
 
