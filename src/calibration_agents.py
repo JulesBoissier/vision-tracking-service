@@ -2,7 +2,7 @@ import math
 from abc import ABC, abstractmethod
 from typing import List, Tuple
 
-from calibration_map import CalibrationMap
+from src.calibration_map import CalibrationMap
 
 
 class CalibrationAgent(ABC):
