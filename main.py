@@ -1,3 +1,6 @@
+import os
+from contextlib import asynccontextmanager
+
 import uvicorn
 from fastapi import FastAPI
 
@@ -5,7 +8,28 @@ from src.calibration_agents import NaiveCalibrationAgent
 from src.gaze_estimation_engine import GazeEstimationEngine
 from src.gaze_net import GazeNet
 
-app = FastAPI()
+# Global variable for the GazeEstimationEngine instance
+gaze_engine = None
+
+# Dictionary to hold the GazeEstimationEngine instance
+resources = {}
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Initialize the GazeEstimationEngine
+    nca = NaiveCalibrationAgent(db_path=None)
+    gn = GazeNet(filepath=os.path.join("models", "L2CSNet_gaze360.pkl"))
+    resources["gaze_engine"] = GazeEstimationEngine(gn, nca)
+    try:
+        yield
+    finally:
+        # Clean up the GazeEstimationEngine
+        resources["gaze_engine"].shutdown()
+        resources.clear()
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/load_profile")
@@ -25,7 +49,9 @@ def save_current_profile():
 
 @app.get("/predict")
 def predict_point_of_regard():
-    pass
+    image = 0
+    gaze_engine = resources.get("gaze_engine")
+    return gaze_engine.predict_gaze_position(image)
 
 
 if __name__ == "__main__":
