@@ -1,6 +1,8 @@
 import os
 from contextlib import asynccontextmanager
 
+import cv2
+import numpy as np
 import uvicorn
 from fastapi import FastAPI, File, UploadFile
 
@@ -51,11 +53,17 @@ def save_current_profile():
 async def predict_point_of_regard(
     file: UploadFile = File(...),  # Accept the uploaded image
 ):
-    # image = 0
-    # Read the uploaded file's content
-    image = await file.read()
+    # Read the uploaded file's content as bytes
+    image_bytes = await file.read()
+
+    # Convert bytes to a NumPy array
+    nparr = np.frombuffer(image_bytes, np.uint8)
+
+    # Decode the image array into an OpenCV image (BGR format)
+    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
     gaze_engine = resources.get("gaze_engine")
-    return gaze_engine.predict_gaze_position(image)
+    return gaze_engine.predict_gaze_position(frame)
 
 
 if __name__ == "__main__":
