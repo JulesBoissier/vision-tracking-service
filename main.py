@@ -44,34 +44,20 @@ def save_current_profile():
     pass
 
 
-def process_image(file: UploadFile = File(...)):
-    # Read the uploaded file's content as bytes
-    image_bytes = file.read()
-
-    # Convert bytes to a NumPy array
-    nparr = np.frombuffer(image_bytes, np.uint8)
-
-    # Decode the image array into an OpenCV image (BGR format)
-    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-    return frame
-
-
 @app.post("/cal_point")
 async def add_calibration_point(
     x: float = Form(...),  # ✅ Explicitly define x as a form field
     y: float = Form(...),  # ✅ Explicitly define y as a form field
     file: UploadFile = File(...),  # Accept the uploaded image
 ):
-    # # Read the uploaded file's content as bytes
-    # image_bytes = await file.read()
+    # Read the uploaded file's content as bytes
+    image_bytes = await file.read()
 
-    # # Convert bytes to a NumPy array
-    # nparr = np.frombuffer(image_bytes, np.uint8)
+    # Convert bytes to a NumPy array
+    nparr = np.frombuffer(image_bytes, np.uint8)
 
-    # # Decode the image array into an OpenCV image (BGR format)
-    # frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    frame = await process_image(file)
+    # Decode the image array into an OpenCV image (BGR format)
+    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
     gaze_engine = resources.get("gaze_engine")
 
