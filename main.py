@@ -44,14 +44,9 @@ def save_current_profile():
     pass
 
 
-@app.post("/cal_point")
-async def add_calibration_point(
-    x: float = Form(...),  # ✅ Explicitly define x as a form field
-    y: float = Form(...),  # ✅ Explicitly define y as a form field
-    file: UploadFile = File(...),  # Accept the uploaded image
-):
+def process_image(file: UploadFile = File(...)):
     # Read the uploaded file's content as bytes
-    image_bytes = await file.read()
+    image_bytes = file.read()
 
     # Convert bytes to a NumPy array
     nparr = np.frombuffer(image_bytes, np.uint8)
@@ -59,10 +54,27 @@ async def add_calibration_point(
     # Decode the image array into an OpenCV image (BGR format)
     frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
+    return frame
+
+
+@app.post("/cal_point")
+async def add_calibration_point(
+    x: float = Form(...),  # ✅ Explicitly define x as a form field
+    y: float = Form(...),  # ✅ Explicitly define y as a form field
+    file: UploadFile = File(...),  # Accept the uploaded image
+):
+    # # Read the uploaded file's content as bytes
+    # image_bytes = await file.read()
+
+    # # Convert bytes to a NumPy array
+    # nparr = np.frombuffer(image_bytes, np.uint8)
+
+    # # Decode the image array into an OpenCV image (BGR format)
+    # frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    frame = await process_image(file)
+
     gaze_engine = resources.get("gaze_engine")
 
-    # _, _, theta, phi = gaze_engine.gaze_net.predict_gaze_vector(frame)
-    # gaze_engine.cal_agent.calibration_step(x, y, theta, phi)
     gaze_engine.run_single_calibration_step(x, y, frame)
     return {
         "message": f"Calibration point added successfully with parameters x: {x}, y: {y}."
