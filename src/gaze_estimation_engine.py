@@ -22,6 +22,18 @@ class GazeEstimationEngine:
         self.gaze_net = gaze_net
         self.cal_agent = cal_agent
 
+    def run_single_calibration_step(self, x: float, y: float, frame: np.ndarray):
+        """
+        Perform a single calibration step using GazeNet and CalibrationAgent.
+
+        Args:
+            x (float): X coordinate on the screen.
+            y (float): Y coordinate on the screen.
+            frame (np.ndarray): The input image for gaze prediction.
+        """
+        _, _, theta, phi = self.gaze_net.predict_gaze_vector(frame)
+        self.cal_agent.calibration_step(x, y, theta, phi)
+
     def run_calibration_steps(
         self, calibration_data: List[Tuple[int, int, np.ndarray]]
     ):
@@ -34,11 +46,8 @@ class GazeEstimationEngine:
         """
         for calibration_point in calibration_data:
             try:
-                _, _, theta, phi = self.gaze_net.predict_gaze_vector(
-                    calibration_point[2]
-                )
-                self.cal_agent.calibration_step(
-                    calibration_point[0], calibration_point[1], theta, phi
+                self.run_single_calibration_step(
+                    calibration_point[0], calibration_point[1], calibration_point[2]
                 )
             except Exception as e:
                 print(f"Calibration step failed for point {calibration_point}: {e}")
