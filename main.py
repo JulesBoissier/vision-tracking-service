@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 import cv2
 import numpy as np
 import uvicorn
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, Form, UploadFile
 
 from src.calibration_agents import NaiveCalibrationAgent
 from src.gaze_estimation_engine import GazeEstimationEngine
@@ -39,14 +39,33 @@ def load_calibration_profile():
     pass
 
 
-@app.post("/cal_point")
-def add_calibration_point():
-    pass
-
-
 @app.post("/save_profile")
 def save_current_profile():
     pass
+
+
+@app.post("/cal_point")
+async def add_calibration_point(
+    x: float = Form(...),  # ✅ Explicitly define x as a form field
+    y: float = Form(...),  # ✅ Explicitly define y as a form field
+    file: UploadFile = File(...),  # Accept the uploaded image
+):
+    # Read the uploaded file's content as bytes
+    image_bytes = await file.read()
+
+    # Convert bytes to a NumPy array
+    nparr = np.frombuffer(image_bytes, np.uint8)
+
+    # Decode the image array into an OpenCV image (BGR format)
+    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+    gaze_engine = resources.get("gaze_engine")
+
+    _, _, theta, phi = gaze_engine.gaze_net.predict_gaze_vector(frame)
+    gaze_engine.cal_agent.calibration_step(x, y, theta, phi)
+    return {
+        "message": f"Calibration point added successfully with parameters x: {x}, y: {y}, theta: {theta}, phi: {phi}."
+    }
 
 
 @app.post("/predict")
