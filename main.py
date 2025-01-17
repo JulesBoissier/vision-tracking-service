@@ -61,10 +61,11 @@ async def add_calibration_point(
 
     gaze_engine = resources.get("gaze_engine")
 
-    _, _, theta, phi = gaze_engine.gaze_net.predict_gaze_vector(frame)
-    gaze_engine.cal_agent.calibration_step(x, y, theta, phi)
+    # _, _, theta, phi = gaze_engine.gaze_net.predict_gaze_vector(frame)
+    # gaze_engine.cal_agent.calibration_step(x, y, theta, phi)
+    gaze_engine.run_single_calibration_step(x, y, frame)
     return {
-        "message": f"Calibration point added successfully with parameters x: {x}, y: {y}, theta: {theta}, phi: {phi}."
+        "message": f"Calibration point added successfully with parameters x: {x}, y: {y}."
     }
 
 
