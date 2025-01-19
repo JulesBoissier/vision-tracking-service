@@ -34,7 +34,7 @@ class GazeEstimationEngine:
         self.cal_agent.calibration_map = self.cds.load_profile(id)
 
     def list_profiles(self):
-        self.cds.list_profiles()
+        return self.cds.list_profiles()
 
     def run_single_calibration_step(self, x: float, y: float, frame: np.ndarray):
         """

@@ -1,6 +1,7 @@
 # Project specific
 data
 models/
+*.db
 
 
 # Byte-compiled / optimized / DLL files
