@@ -9,12 +9,14 @@ fastapi==0.115.6
 filelock==3.16.1
 fonttools==4.55.3
 fsspec==2024.12.0
+greenlet==3.1.1
 h11==0.14.0
 identify==2.6.5
 idna==3.10
 iniconfig==2.0.0
 Jinja2==3.1.5
 kiwisolver==1.4.8
+l2cs @ git+https://github.com/edavalosanaya/L2CS-Net.git@4a0f978d5b4c426a7d37022d8c927d6ea031dcb6
 MarkupSafe==3.0.2
 matplotlib==3.10.0
 mpmath==1.3.0
@@ -52,6 +54,7 @@ scipy==1.15.0
 setuptools==75.7.0
 six==1.17.0
 sniffio==1.3.1
+SQLAlchemy==2.0.37
 starlette==0.41.3
 sympy==1.13.1
 torch==2.5.1
@@ -61,4 +64,3 @@ typing_extensions==4.12.2
 tzdata==2024.2
 uvicorn==0.34.0
 virtualenv==20.28.1
-git+https://github.com/edavalosanaya/L2CS-Net.git@4a0f978d5b4c426a7d37022d8c927d6ea031dcb6

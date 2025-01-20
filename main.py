@@ -7,6 +7,7 @@ import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile
 
 from src.calibration_agents import NaiveCalibrationAgent
+from src.calibration_data_store import CalibrationDataStore
 from src.gaze_estimation_engine import GazeEstimationEngine
 from src.gaze_net import GazeNet
 
@@ -20,9 +21,11 @@ resources = {}
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize the GazeEstimationEngine
+
     nca = NaiveCalibrationAgent(db_path=None)
+    cds = CalibrationDataStore()
     gn = GazeNet(filepath=os.path.join("models", "L2CSNet_gaze360.pkl"))
-    resources["gaze_engine"] = GazeEstimationEngine(gn, nca)
+    resources["gaze_engine"] = GazeEstimationEngine(gn, nca, cds)
     try:
         yield
     finally:
@@ -34,20 +37,28 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-@app.get("/load_profile")
-def load_calibration_profile():
-    pass
-
-
 @app.post("/save_profile")
 def save_current_profile():
-    pass
+    gaze_engine = resources.get("gaze_engine")
+    gaze_engine.save_profile("Test")
+
+
+@app.get("/list_profiles")
+def list_calibration_profiles():
+    gaze_engine = resources.get("gaze_engine")
+    return gaze_engine.list_profiles()
+
+
+@app.post("/load_profile")
+def load_calibration_profile(profile_id: int):
+    gaze_engine = resources.get("gaze_engine")
+    gaze_engine.load_profile(profile_id)
 
 
 @app.post("/cal_point")
 async def add_calibration_point(
-    x: float = Form(...),  # ✅ Explicitly define x as a form field
-    y: float = Form(...),  # ✅ Explicitly define y as a form field
+    x: float = Form(...),  # Explicitly define x as a form field
+    y: float = Form(...),  # Explicitly define y as a form field
     file: UploadFile = File(...),  # Accept the uploaded image
 ):
     # Read the uploaded file's content as bytes

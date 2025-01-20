@@ -3,6 +3,7 @@ from typing import List, Tuple
 import numpy as np
 
 from src.calibration_agents import CalibrationAgent
+from src.calibration_data_store import CalibrationDataStore
 from src.gaze_net import GazeNet
 
 
@@ -11,16 +12,29 @@ class GazeEstimationEngine:
     A class responsible for estimating gaze positions using GazeNet and CalibrationAgent.
     """
 
-    def __init__(self, gaze_net: GazeNet, cal_agent: CalibrationAgent):
+    def __init__(
+        self, gaze_net: GazeNet, cal_agent: CalibrationAgent, cds=CalibrationDataStore
+    ):
         """
         Initialize the GazeEstimationEngine.
 
         Args:
             gaze_net (GazeNet): An instance of GazeNet for predicting gaze vectors.
             cal_agent (CalibrationAgent): An instance of CalibrationAgent for calibration tasks.
+            cds (CalibrationDataStore): An instance of CalibrationDataStore for storing and retrieving calibration profiles.
         """
         self.gaze_net = gaze_net
         self.cal_agent = cal_agent
+        self.cds = cds
+
+    def save_profile(self, name):
+        self.cds.save_profile(name, self.cal_agent.calibration_map)
+
+    def load_profile(self, id):
+        self.cal_agent.calibration_map = self.cds.load_profile(id)
+
+    def list_profiles(self):
+        return self.cds.list_profiles()
 
     def run_single_calibration_step(self, x: float, y: float, frame: np.ndarray):
         """

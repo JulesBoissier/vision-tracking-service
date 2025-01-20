@@ -11,16 +11,6 @@ class CalibrationAgent(ABC):
     """
 
     @abstractmethod
-    def create_profile(self):
-        """Create a new calibration profile."""
-        pass
-
-    @abstractmethod
-    def load_profile(self):
-        """Load an existing calibration profile."""
-        pass
-
-    @abstractmethod
     def calculate_point_of_regard(
         self, theta: float, phi: float
     ) -> Tuple[float, float]:
@@ -51,12 +41,6 @@ class NaiveCalibrationAgent(CalibrationAgent):
         """
         self.db_path = db_path
         self.calibration_map = CalibrationMap()
-
-    def create_profile(self):
-        pass
-
-    def load_profile(self):
-        pass
 
     def calibration_step(self, x: float, y: float, theta: float, phi: float):
         """
