@@ -1,7 +1,7 @@
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 import cv2
 import numpy as np
@@ -49,7 +49,7 @@ class ProfileListResponse(BaseModel):
 
 
 class GazePredictionResponse(BaseModel):
-    prediction: List[float]
+    prediction: List[Optional[float]]
 
 
 @app.post("/save_profile")
@@ -119,7 +119,7 @@ async def predict_point_of_regard(
     gaze_engine = resources.get("gaze_engine")
     predictions = gaze_engine.predict_gaze_position(frame)
 
-    return GazePredictionResponse(predictions=predictions)
+    return GazePredictionResponse(prediction=predictions)
 
 
 if __name__ == "__main__":
