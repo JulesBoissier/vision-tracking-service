@@ -36,6 +36,9 @@ class GazeEstimationEngine:
     def list_profiles(self):
         return self.cds.list_profiles()
 
+    def delete_profile(self, id):
+        self.cds.delete_profile(id)
+
     def run_single_calibration_step(self, x: float, y: float, frame: np.ndarray):
         """
         Perform a single calibration step using GazeNet and CalibrationAgent.
