@@ -36,6 +36,9 @@ class GazeEstimationEngine:
     def list_profiles(self):
         return self.cds.list_profiles()
 
+    def delete_profile(self, id):
+        self.cds.delete_profile(id)
+
     def run_single_calibration_step(self, x: float, y: float, frame: np.ndarray):
         """
         Perform a single calibration step using GazeNet and CalibrationAgent.
@@ -77,5 +80,11 @@ class GazeEstimationEngine:
             Tuple[float, float]: The predicted screen coordinates (x, y).
         """
         _, _, theta, phi = self.gaze_net.predict_gaze_vector(image)
-        screen_x, screen_y = self.cal_agent.calculate_point_of_regard(theta, phi)
+
+        try:
+            screen_x, screen_y = self.cal_agent.calculate_point_of_regard(theta, phi)
+
+        except ZeroDivisionError:
+            print("Calibration profile is empty.")
+            screen_x, screen_y = None, None
         return screen_x, screen_y
