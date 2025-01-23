@@ -1,7 +1,7 @@
 import random
 import unittest
 
-from src.calibration_agents import NaiveCalibrationAgent
+from src.backend.calibration_agents import NaiveCalibrationAgent
 
 
 class TestNaiveCalibrationAgent(unittest.TestCase):
