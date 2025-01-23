@@ -1,11 +1,11 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from src.gaze_net import GazeNet
+from src.backend.gaze_net import GazeNet
 
 
 class TestGazeNet(unittest.TestCase):
-    @patch("src.gaze_net.Pipeline")
+    @patch("src.backend.gaze_net.Pipeline")
     def setUp(self, mock_pipeline):
         """
         Set up a shared GazeNet instance with a mocked Pipeline for all tests.

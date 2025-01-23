@@ -2,9 +2,9 @@ from typing import List, Tuple
 
 import numpy as np
 
-from src.calibration_agents import CalibrationAgent
-from src.calibration_data_store import CalibrationDataStore
-from src.gaze_net import GazeNet
+from src.backend.calibration_agents import CalibrationAgent
+from src.backend.calibration_data_store import CalibrationDataStore
+from src.backend.gaze_net import GazeNet
 
 
 class GazeEstimationEngine:

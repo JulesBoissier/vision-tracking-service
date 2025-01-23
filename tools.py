@@ -4,8 +4,8 @@ import cv2
 import torch
 from l2cs import Pipeline, render
 
-from src.calibration_agents import NaiveCalibrationAgent
-from src.gaze_net import GazeNet
+from src.backend.calibration_agents import NaiveCalibrationAgent
+from src.backend.gaze_net import GazeNet
 
 
 def camera_capture(cap, filepath):
