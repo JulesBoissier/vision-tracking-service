@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: gaze_estimation_app
+    ports:
+      - "8000:8000"
+    volumes:
+      - sqlite_data:/app  # Use a Docker volume for persistence
+    restart: always
+
+volumes:
+  sqlite_data:

@@ -32,14 +32,10 @@ class NaiveCalibrationAgent(CalibrationAgent):
     A naive implementation of a CalibrationAgent assuming static head position.
     """
 
-    def __init__(self, db_path: str):
+    def __init__(self):
         """
         Initialize the NaiveCalibrationAgent.
-
-        Args:
-            db_path (str): Path to the database for storing calibration profiles.
         """
-        self.db_path = db_path
         self.calibration_map = CalibrationMap()
 
     def calibration_step(self, x: float, y: float, theta: float, phi: float):

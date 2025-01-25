@@ -3,7 +3,6 @@ from contextlib import asynccontextmanager
 
 import cv2
 import numpy as np
-import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile
 
 from src.app.models import GazePredictionResponse, ProfileListResponse
@@ -20,8 +19,8 @@ resources = {}
 async def lifespan(app: FastAPI):
     # Initialize the GazeEstimationEngine
 
-    nca = NaiveCalibrationAgent(db_path=None)
-    cds = CalibrationDataStore()
+    nca = NaiveCalibrationAgent()
+    cds = CalibrationDataStore(db_url="sqlite:///calibration.db")
     gn = GazeNet(filepath=os.path.join("models", "L2CSNet_gaze360.pkl"))
     resources["gaze_engine"] = GazeEstimationEngine(gn, nca, cds)
     try:
@@ -38,7 +37,7 @@ app = FastAPI(lifespan=lifespan)
 @app.post("/save_profile")
 def save_current_profile(name: str):
     gaze_engine = resources.get("gaze_engine")
-    gaze_engine.save_profile("profile_name")
+    gaze_engine.save_profile(name)
     return {"message": f"Profile '{name}' saved successfully."}
 
 
