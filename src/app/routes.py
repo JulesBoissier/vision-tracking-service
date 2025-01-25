@@ -20,8 +20,8 @@ resources = {}
 async def lifespan(app: FastAPI):
     # Initialize the GazeEstimationEngine
 
-    nca = NaiveCalibrationAgent(db_path=None)
-    cds = CalibrationDataStore()
+    nca = NaiveCalibrationAgent()
+    cds = CalibrationDataStore(db_url="sqlite:///calibration.db")
     gn = GazeNet(filepath=os.path.join("models", "L2CSNet_gaze360.pkl"))
     resources["gaze_engine"] = GazeEstimationEngine(gn, nca, cds)
     try:
