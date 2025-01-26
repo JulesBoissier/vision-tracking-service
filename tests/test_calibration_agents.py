@@ -1,12 +1,12 @@
 import random
 import unittest
 
-from src.backend.calibration_agents import NaiveCalibrationAgent
+from src.backend.calibration_agents import InterpolationAgent
 
 
-class TestNaiveCalibrationAgent(unittest.TestCase):
+class TestInterpolationAgent(unittest.TestCase):
     def test_calibration_step(self):
-        self.ca = NaiveCalibrationAgent()
+        self.ca = InterpolationAgent()
 
         # Adding one point with values: x = 100, y = 200, theta = 30 and phi = 45
         self.ca.calibration_step(100, 200, 30, 45)
@@ -30,7 +30,7 @@ class TestNaiveCalibrationAgent(unittest.TestCase):
         self.assertEqual(self.ca.calibration_map.phi_values[1], 55)
 
     def test_interpolate_to_existing_anchor(self):
-        self.ca = NaiveCalibrationAgent()
+        self.ca = InterpolationAgent()
 
         # Setting up a target angle present in calibration values
         target_angle = 1
@@ -44,7 +44,7 @@ class TestNaiveCalibrationAgent(unittest.TestCase):
         self.assertAlmostEqual(interpolated_coordinate, 200)
 
     def test_interpolate_to_non_existing_anchor(self):
-        self.ca = NaiveCalibrationAgent()
+        self.ca = InterpolationAgent()
 
         random_coordinate = random.randint(1, 1000)
         random_angle = random.randint(1, 2)

@@ -1,20 +1,20 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from src.backend.gaze_net import GazeNet
+from src.backend.gaze_predictor import GazePredictor
 
 
-class TestGazeNet(unittest.TestCase):
-    @patch("src.backend.gaze_net.Pipeline")
+class TestGazePredictor(unittest.TestCase):
+    @patch("src.backend.gaze_predictor.Pipeline")
     def setUp(self, mock_pipeline):
         """
-        Set up a shared GazeNet instance with a mocked Pipeline for all tests.
+        Set up a shared GazePredictor instance with a mocked Pipeline for all tests.
         """
         # Mock the return value of Pipeline
         mock_pipeline.return_value = MagicMock()
 
-        # Create the GazeNet instance
-        self.gaze_net = GazeNet(filepath="mock_weights.pth")
+        # Create the GazePredictor instance
+        self.gaze_net = GazePredictor(filepath="mock_weights.pth")
 
         # Save the mock for later assertions if needed
         self.mock_pipeline = mock_pipeline
@@ -38,8 +38,8 @@ class TestGazeNet(unittest.TestCase):
     #     mock_image = MagicMock()
     #     mock_image.shape = (224, 224, 3)  # Simulate an image tensor with shape
 
-    #     # Instantiate GazeNet
-    #     gaze_net = GazeNet(filepath="mock_weights.pth")
+    #     # Instantiate GazePredictor
+    #     gaze_net = GazePredictor(filepath="mock_weights.pth")
 
     #     # Call predict_gaze_vector
     #     result = gaze_net.predict_gaze_vector(mock_image)

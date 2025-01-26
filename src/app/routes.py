@@ -6,27 +6,27 @@ import numpy as np
 from fastapi import FastAPI, File, Form, UploadFile
 
 from src.app.models import GazePredictionResponse, ProfileListResponse
-from src.backend.calibration_agents import NaiveCalibrationAgent
-from src.backend.calibration_data_store import CalibrationDataStore
-from src.backend.gaze_estimation_engine import GazeEstimationEngine
-from src.backend.gaze_net import GazeNet
+from src.backend.calibration_agents import InterpolationAgent
+from src.backend.calibration_profile_store import CalibrationProfileStore
+from src.backend.gaze_predictor import GazePredictor
+from src.backend.vision_tracking_engine import VisionTrackingEngine
 
-# Dictionary to hold the GazeEstimationEngine instance
+# Dictionary to hold the VisionTrackingEngine instance
 resources = {}
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize the GazeEstimationEngine
+    # Initialize the VisionTrackingEngine
 
-    nca = NaiveCalibrationAgent()
-    cds = CalibrationDataStore(db_url="sqlite:///calibration.db")
-    gn = GazeNet(filepath=os.path.join("models", "L2CSNet_gaze360.pkl"))
-    resources["gaze_engine"] = GazeEstimationEngine(gn, nca, cds)
+    nca = InterpolationAgent()
+    cds = CalibrationProfileStore(db_url="sqlite:///calibration.db")
+    gn = GazePredictor(filepath=os.path.join("models", "L2CSNet_gaze360.pkl"))
+    resources["gaze_engine"] = VisionTrackingEngine(gn, nca, cds)
     try:
         yield
     finally:
-        # Clean up the GazeEstimationEngine
+        # Clean up the VisionTrackingEngine
         resources["gaze_engine"].shutdown()
         resources.clear()
 

@@ -11,14 +11,14 @@ warnings.filterwarnings(
 )
 
 
-class GazeNet:
+class GazePredictor:
     """
     A wrapper for the gaze prediction pipeline.
     """
 
     def __init__(self, filepath: str):
         """
-        Initialize the GazeNet pipeline.
+        Initialize the GazePredictor pipeline.
 
         Args:
             filepath (str): Path to the model weights file.

@@ -4,8 +4,8 @@ import cv2
 import torch
 from l2cs import Pipeline, render
 
-from src.backend.calibration_agents import NaiveCalibrationAgent
-from src.backend.gaze_net import GazeNet
+from src.backend.calibration_agents import InterpolationAgent
+from src.backend.gaze_predictor import GazePredictor
 
 
 def camera_capture(cap, filepath):
@@ -39,7 +39,7 @@ def camera_capture(cap, filepath):
     cv2.destroyAllWindows()
 
 
-def update_calibration_map(ca: NaiveCalibrationAgent, net: GazeNet, filepath):
+def update_calibration_map(ca: InterpolationAgent, net: GazePredictor, filepath):
     image_names = sorted(
         [
             os.path.join(filepath, f)
@@ -59,7 +59,7 @@ def update_calibration_map(ca: NaiveCalibrationAgent, net: GazeNet, filepath):
         ca.calibration_step(x, y, theta, phi)
 
 
-def infer_point_of_regard(cap, ca: NaiveCalibrationAgent, net: GazeNet):
+def infer_point_of_regard(cap, ca: InterpolationAgent, net: GazePredictor):
     print("Press 'c' to capture a picture, and 'q' to quit.")
     while True:
         # Capture frame-by-frame
