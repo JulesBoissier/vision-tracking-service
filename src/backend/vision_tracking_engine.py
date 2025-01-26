@@ -3,25 +3,28 @@ from typing import List, Tuple
 import numpy as np
 
 from src.backend.calibration_agents import CalibrationAgent
-from src.backend.calibration_data_store import CalibrationDataStore
-from src.backend.gaze_net import GazeNet
+from src.backend.calibration_profile_store import CalibrationProfileStore
+from src.backend.gaze_predictor import GazePredictor
 
 
-class GazeEstimationEngine:
+class VisionTrackingEngine:
     """
-    A class responsible for estimating gaze positions using GazeNet and CalibrationAgent.
+    A class responsible for estimating gaze positions using GazePredictor and CalibrationAgent.
     """
 
     def __init__(
-        self, gaze_net: GazeNet, cal_agent: CalibrationAgent, cds=CalibrationDataStore
+        self,
+        gaze_net: GazePredictor,
+        cal_agent: CalibrationAgent,
+        cds=CalibrationProfileStore,
     ):
         """
-        Initialize the GazeEstimationEngine.
+        Initialize the VisionTrackingEngine.
 
         Args:
-            gaze_net (GazeNet): An instance of GazeNet for predicting gaze vectors.
+            gaze_net (GazePredictor): An instance of GazePredictor for predicting gaze vectors.
             cal_agent (CalibrationAgent): An instance of CalibrationAgent for calibration tasks.
-            cds (CalibrationDataStore): An instance of CalibrationDataStore for storing and retrieving calibration profiles.
+            cds (CalibrationProfileStore): An instance of CalibrationProfileStore for storing and retrieving calibration profiles.
         """
         self.gaze_net = gaze_net
         self.cal_agent = cal_agent
@@ -41,7 +44,7 @@ class GazeEstimationEngine:
 
     def run_single_calibration_step(self, x: float, y: float, frame: np.ndarray):
         """
-        Perform a single calibration step using GazeNet and CalibrationAgent.
+        Perform a single calibration step using GazePredictor and CalibrationAgent.
 
         Args:
             x (float): X coordinate on the screen.

@@ -21,7 +21,7 @@ class CalibrationProfile(Base):
     calibration_map = Column(PickleType)  # Storing dict as binary
 
 
-class CalibrationDataStore:
+class CalibrationProfileStore:
     """Handles database interactions for calibration profiles."""
 
     def __init__(self, db_url="sqlite:///calibration.db"):

@@ -27,14 +27,14 @@ class CalibrationAgent(ABC):
         pass
 
 
-class NaiveCalibrationAgent(CalibrationAgent):
+class InterpolationAgent(CalibrationAgent):
     """
-    A naive implementation of a CalibrationAgent assuming static head position.
+    An interpolation based implementation of a CalibrationAgent assuming static head position.
     """
 
     def __init__(self):
         """
-        Initialize the NaiveCalibrationAgent.
+        Initialize the InterpolationAgent.
         """
         self.calibration_map = CalibrationMap()
 
