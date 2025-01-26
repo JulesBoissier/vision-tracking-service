@@ -2,7 +2,7 @@
 
 An ML-Powered Gaze tracking and point of regard estimation tool wrapped in a FastAPI-based web-server.
 
-### High-Level Architecture and Key Components
+## High-Level Architecture and Key Components
 
 <div align="center">
   <img src="assets/architecture-diagram.png" alt="High-Level Architecture Diagram" width="600"/>
@@ -18,7 +18,7 @@ An ML-Powered Gaze tracking and point of regard estimation tool wrapped in a Fas
 **Calibration Profile Store:** An SQLAlchemy-based database handler to store and retrieve Calibration Profiles.
 
 
-### Usage
+## Usage
 
 1. Download the pre-trained Gaze360 Model from [here](https://drive.google.com/drive/folders/17p6ORr-JQJcw-eYtG2WGNiuS_qVKwdWd) and drop the pickle file into the models directory.
 
@@ -50,3 +50,18 @@ curl -X POST "http://127.0.0.1:8000/save_profile?name=my_profile"
 ```bash
 curl -X POST "http://127.0.0.1:8000/predict" -F "file=@new_image.jpg"
 ```
+
+
+## TODOs:
+
+Future improvements for later versions:
+
+**Vision Tracking Engine:**
+- Support for multi-screen prediction.
+
+**Calibration Agent:**
+- Add support for more interpolation methods.
+- Use predicted X, Y positions for more accurate predictions.
+
+**Gaze Predictor:**
+- Improve test coverage.
