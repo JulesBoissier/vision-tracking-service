@@ -14,7 +14,7 @@ class TestGazePredictor(unittest.TestCase):
         mock_pipeline.return_value = MagicMock()
 
         # Create the GazePredictor instance
-        self.gaze_net = GazePredictor(filepath="mock_weights.pth")
+        self.gaze_predictor = GazePredictor(filepath="mock_weights.pth")
 
         # Save the mock for later assertions if needed
         self.mock_pipeline = mock_pipeline
@@ -39,10 +39,10 @@ class TestGazePredictor(unittest.TestCase):
     #     mock_image.shape = (224, 224, 3)  # Simulate an image tensor with shape
 
     #     # Instantiate GazePredictor
-    #     gaze_net = GazePredictor(filepath="mock_weights.pth")
+    #     gaze_predictor = GazePredictor(filepath="mock_weights.pth")
 
     #     # Call predict_gaze_vector
-    #     result = gaze_net.predict_gaze_vector(mock_image)
+    #     result = gaze_predictor.predict_gaze_vector(mock_image)
 
     #     # Assert the result matches the mocked values
     #     self.assertEqual(result, (184.0, 30.0, 0.5, 1.0))  # Expected x, y, pitch, yaw

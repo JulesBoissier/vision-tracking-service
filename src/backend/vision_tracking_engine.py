@@ -14,33 +14,33 @@ class VisionTrackingEngine:
 
     def __init__(
         self,
-        gaze_net: GazePredictor,
+        gaze_predictor: GazePredictor,
         cal_agent: CalibrationAgent,
-        cds=CalibrationProfileStore,
+        cps=CalibrationProfileStore,
     ):
         """
         Initialize the VisionTrackingEngine.
 
         Args:
-            gaze_net (GazePredictor): An instance of GazePredictor for predicting gaze vectors.
+            gaze_predictor (GazePredictor): An instance of GazePredictor for predicting gaze vectors.
             cal_agent (CalibrationAgent): An instance of CalibrationAgent for calibration tasks.
-            cds (CalibrationProfileStore): An instance of CalibrationProfileStore for storing and retrieving calibration profiles.
+            cps (CalibrationProfileStore): An instance of CalibrationProfileStore for storing and retrieving calibration profiles.
         """
-        self.gaze_net = gaze_net
+        self.gaze_predictor = gaze_predictor
         self.cal_agent = cal_agent
-        self.cds = cds
+        self.cps = cps
 
     def save_profile(self, name):
-        self.cds.save_profile(name, self.cal_agent.calibration_map)
+        self.cps.save_profile(name, self.cal_agent.calibration_map)
 
     def load_profile(self, id):
-        self.cal_agent.calibration_map = self.cds.load_profile(id)
+        self.cal_agent.calibration_map = self.cps.load_profile(id)
 
     def list_profiles(self):
-        return self.cds.list_profiles()
+        return self.cps.list_profiles()
 
     def delete_profile(self, id):
-        self.cds.delete_profile(id)
+        self.cps.delete_profile(id)
 
     def run_single_calibration_step(self, x: float, y: float, frame: np.ndarray):
         """
@@ -51,7 +51,7 @@ class VisionTrackingEngine:
             y (float): Y coordinate on the screen.
             frame (np.ndarray): The input image for gaze prediction.
         """
-        _, _, theta, phi = self.gaze_net.predict_gaze_vector(frame)
+        _, _, theta, phi = self.gaze_predictor.predict_gaze_vector(frame)
         self.cal_agent.calibration_step(x, y, theta, phi)
 
     def run_calibration_steps(
@@ -82,7 +82,7 @@ class VisionTrackingEngine:
         Returns:
             Tuple[float, float]: The predicted screen coordinates (x, y).
         """
-        _, _, theta, phi = self.gaze_net.predict_gaze_vector(image)
+        _, _, theta, phi = self.gaze_predictor.predict_gaze_vector(image)
 
         try:
             screen_x, screen_y = self.cal_agent.calculate_point_of_regard(theta, phi)
