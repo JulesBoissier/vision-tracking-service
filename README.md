@@ -4,7 +4,10 @@ An ML-Powered Gaze tracking and point of regard estimation tool wrapped in a Fas
 
 ### High-Level Architecture and Key Components
 
-![Gaze Estimation](assets/architecture-diagram.png)
+<div align="center">
+  <img src="assets/architecture-diagram.png" alt="High-Level Architecture Diagram" width="600"/>
+  <p><strong>Fig 1.</strong> High-Level Architecture Diagram of Key Components of the Vision Tracking Service</p>
+</div>
 
 **Vision Tracking Engine:** The central orchestration object leveraging composition of the three other key component to manage calibration profiles and predict point of regard.
 
