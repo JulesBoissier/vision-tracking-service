@@ -19,15 +19,14 @@ resources = {}
 async def lifespan(app: FastAPI):
     # Initialize the VisionTrackingEngine
 
-    nca = InterpolationAgent()
-    cds = CalibrationProfileStore(db_url="sqlite:///calibration.db")
-    gn = GazePredictor(filepath=os.path.join("models", "L2CSNet_gaze360.pkl"))
-    resources["gaze_engine"] = VisionTrackingEngine(gn, nca, cds)
+    ia = InterpolationAgent()
+    cps = CalibrationProfileStore(db_url="sqlite:///calibration.db")
+    gp = GazePredictor(filepath=os.path.join("models", "L2CSNet_gaze360.pkl"))
+    resources["vision_engine"] = VisionTrackingEngine(gp, ia, cps)
     try:
         yield
     finally:
         # Clean up the VisionTrackingEngine
-        resources["gaze_engine"].shutdown()
         resources.clear()
 
 
@@ -36,29 +35,29 @@ app = FastAPI(lifespan=lifespan)
 
 @app.post("/save_profile")
 def save_current_profile(name: str):
-    gaze_engine = resources.get("gaze_engine")
-    gaze_engine.save_profile(name)
+    vision_engine = resources.get("vision_engine")
+    vision_engine.save_profile(name)
     return {"message": f"Profile '{name}' saved successfully."}
 
 
 @app.get("/list_profiles")
 def list_calibration_profiles():
-    gaze_engine = resources.get("gaze_engine")
-    profiles = gaze_engine.list_profiles()
+    vision_engine = resources.get("vision_engine")
+    profiles = vision_engine.list_profiles()
     return ProfileListResponse(profiles=profiles)
 
 
 @app.post("/load_profile")
 def load_calibration_profile(profile_id: int):
-    gaze_engine = resources.get("gaze_engine")
-    gaze_engine.load_profile(profile_id)
+    vision_engine = resources.get("vision_engine")
+    vision_engine.load_profile(profile_id)
     return {"message": "Profile loaded successfully."}
 
 
 @app.post("/delete_profile")
 def delete_calibration_profile(profile_id: int):
-    gaze_engine = resources.get("gaze_engine")
-    gaze_engine.delete_profile(profile_id)
+    vision_engine = resources.get("vision_engine")
+    vision_engine.delete_profile(profile_id)
     return {"message": "Profile deleted successfully."}
 
 
@@ -77,9 +76,9 @@ async def add_calibration_point(
     # Decode the image array into an OpenCV image (BGR format)
     frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-    gaze_engine = resources.get("gaze_engine")
+    vision_engine = resources.get("vision_engine")
 
-    gaze_engine.run_single_calibration_step(x, y, frame)
+    vision_engine.run_single_calibration_step(x, y, frame)
     return {
         "message": f"Calibration point added successfully with parameters x: {x}, y: {y}."
     }
@@ -98,7 +97,7 @@ async def predict_point_of_regard(
     # Decode the image array into an OpenCV image (BGR format)
     frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-    gaze_engine = resources.get("gaze_engine")
-    predictions = gaze_engine.predict_gaze_position(frame)
+    vision_engine = resources.get("vision_engine")
+    predictions = vision_engine.predict_gaze_position(frame)
 
     return GazePredictionResponse(prediction=predictions)
