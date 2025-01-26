@@ -27,7 +27,6 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         # Clean up the VisionTrackingEngine
-        resources["gaze_engine"].shutdown()
         resources.clear()
 
 
