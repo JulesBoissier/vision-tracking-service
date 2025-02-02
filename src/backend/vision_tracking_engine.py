@@ -84,10 +84,16 @@ class VisionTrackingEngine:
         """
         _, _, theta, phi = self.gaze_predictor.predict_gaze_vector(image)
 
+        print("YOYO")
+        print(theta, phi)
+
         try:
             screen_x, screen_y = self.cal_agent.calculate_point_of_regard(theta, phi)
 
         except ZeroDivisionError:
             print("Calibration profile is empty.")
+            screen_x, screen_y = None, None
+        except TypeError:
+            print("No face detected.")
             screen_x, screen_y = None, None
         return screen_x, screen_y
