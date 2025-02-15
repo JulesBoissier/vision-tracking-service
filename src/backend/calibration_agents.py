@@ -36,6 +36,9 @@ class InterpolationAgent(CalibrationAgent):
         """
         Initialize the InterpolationAgent.
         """
+        self.initialize_cal_map()
+
+    def initialize_cal_map(self):
         self.calibration_map = CalibrationMap()
 
     def calibration_step(self, x: float, y: float, theta: float, phi: float):
