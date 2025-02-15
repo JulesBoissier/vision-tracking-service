@@ -90,4 +90,7 @@ class VisionTrackingEngine:
         except ZeroDivisionError:
             print("Calibration profile is empty.")
             screen_x, screen_y = None, None
+        except TypeError:
+            print("No face detected.")
+            screen_x, screen_y = None, None
         return screen_x, screen_y
