@@ -61,6 +61,13 @@ def delete_calibration_profile(profile_id: int):
     return {"message": "Profile deleted successfully."}
 
 
+@app.post("/reset_profile")
+def reset_calibration_profile():
+    vision_engine = resources.get("vision_engine")
+    vision_engine.cal_agent.initialize_cal_map()
+    return {"message": "Profile reset successfully."}
+
+
 @app.post("/cal_point")
 async def add_calibration_point(
     x: float = Form(...),  # Explicitly define x as a form field
