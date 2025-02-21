@@ -41,7 +41,15 @@ class InterpolationAgent(CalibrationAgent):
     def initialize_cal_map(self):
         self.calibration_map = CalibrationMap()
 
-    def calibration_step(self, x: float, y: float, theta: float, phi: float):
+    def calibration_step(
+        self,
+        monitor_x: float,
+        monitor_y: float,
+        head_x: float,
+        head_y: float,
+        theta: float,
+        phi: float,
+    ):
         """
         Add a calibration point during the calibration process.
 
@@ -51,7 +59,9 @@ class InterpolationAgent(CalibrationAgent):
             theta (float): Horizontal gaze angle.
             phi (float): Vertical gaze angle.
         """
-        self.calibration_map.add_calibration_point(x, y, theta, phi)
+        self.calibration_map.add_calibration_point(
+            monitor_x, monitor_y, head_x, head_y, theta, phi
+        )
 
     def _interpolate(
         self,
@@ -92,9 +102,11 @@ class InterpolationAgent(CalibrationAgent):
             Tuple[float, float]: Screen coordinates (x, y).
         """
         x_screen = self._interpolate(
-            theta, self.calibration_map.x_values, self.calibration_map.theta_values
+            theta,
+            self.calibration_map.monitor_x_values,
+            self.calibration_map.theta_values,
         )
         y_screen = self._interpolate(
-            phi, self.calibration_map.y_values, self.calibration_map.phi_values
+            phi, self.calibration_map.monitor_y_values, self.calibration_map.phi_values
         )
         return x_screen, y_screen

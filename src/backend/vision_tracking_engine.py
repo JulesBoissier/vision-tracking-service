@@ -42,7 +42,9 @@ class VisionTrackingEngine:
     def delete_profile(self, id):
         self.cps.delete_profile(id)
 
-    def run_single_calibration_step(self, x: float, y: float, frame: np.ndarray):
+    def run_single_calibration_step(
+        self, head_x: float, head_y: float, frame: np.ndarray
+    ):
         """
         Perform a single calibration step using GazePredictor and CalibrationAgent.
 
@@ -51,8 +53,12 @@ class VisionTrackingEngine:
             y (float): Y coordinate on the screen.
             frame (np.ndarray): The input image for gaze prediction.
         """
-        _, _, theta, phi = self.gaze_predictor.predict_gaze_vector(frame)
-        self.cal_agent.calibration_step(x, y, theta, phi)
+        monitor_x, monitor_y, theta, phi = self.gaze_predictor.predict_gaze_vector(
+            frame
+        )
+        self.cal_agent.calibration_step(
+            head_x, head_y, monitor_x, monitor_y, theta, phi
+        )
 
     def run_calibration_steps(
         self, calibration_data: List[Tuple[int, int, np.ndarray]]

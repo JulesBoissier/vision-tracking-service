@@ -12,8 +12,8 @@ class TestInterpolationAgent(unittest.TestCase):
         self.ca.calibration_step(100, 200, 30, 45)
 
         # Checking that CalibrationMap contains the correct values
-        self.assertEqual(self.ca.calibration_map.x_values, [100])
-        self.assertEqual(self.ca.calibration_map.y_values, [200])
+        self.assertEqual(self.ca.calibration_map.monitor_x_values, [100])
+        self.assertEqual(self.ca.calibration_map.monitor_y_values, [200])
         self.assertEqual(self.ca.calibration_map.theta_values, [30])
         self.assertEqual(self.ca.calibration_map.phi_values, [45])
 
@@ -24,8 +24,8 @@ class TestInterpolationAgent(unittest.TestCase):
         self.ca.calibration_step(1, 1, 1, 1)
 
         # Checking that second value of each list still points to the second point
-        self.assertEqual(self.ca.calibration_map.x_values[1], 200)
-        self.assertEqual(self.ca.calibration_map.y_values[1], 5000)
+        self.assertEqual(self.ca.calibration_map.monitor_x_values[1], 200)
+        self.assertEqual(self.ca.calibration_map.monitor_y_values[1], 5000)
         self.assertEqual(self.ca.calibration_map.theta_values[1], 120)
         self.assertEqual(self.ca.calibration_map.phi_values[1], 55)
 
