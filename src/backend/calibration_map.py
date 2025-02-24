@@ -33,12 +33,6 @@ class CalibrationMap:
             theta_value (float): Gaze angle in horizontal direction.
             phi_value (float): Gaze angle in vertical direction.
         """
-        print("ADDING CAL POINT:")
-        print(monitor_x_value)
-        print(monitor_y_value)
-        print(head_x_value)
-        print(head_y_value)
-
         self.monitor_x_values.append(monitor_x_value)
         self.monitor_y_values.append(monitor_y_value)
         self.head_x_values.append(head_x_value)
