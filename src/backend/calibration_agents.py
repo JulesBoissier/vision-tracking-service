@@ -67,27 +67,37 @@ class InterpolationAgent(CalibrationAgent):
         self,
         position: float,
         angle: float,
-        calibration_coordinates: List[float],
+        calibration_monitor_coordinates: List[float],
+        calibration_head_coordinates: List[float],
         calibration_angles: List[float],
     ) -> float:
         """
-        Interpolate the screen coordinate based on calibration data.
+        Interpolate the screen coordinate based on both head position and gaze angle.
 
         Args:
-            angle (float): The gaze angle to interpolate.
-            calibration_coordinates (List[float]): Corresponding screen coordinates.
+            position (float): The current head position.
+            angle (float): The current gaze angle.
+            calibration_monitor_coordinates (List[float]): Corresponding screen coordinates.
+            calibration_head_coordinates (List[float]): Corresponding head positions.
             calibration_angles (List[float]): Corresponding gaze angles.
 
         Returns:
             float: Interpolated screen coordinate.
         """
-        # TODO: Multiply position and orientation in interpolation.
         epsilon = 1e-6
+        # Calculate the combined Euclidean distance in the (position, angle) space.
         distances = [
-            math.sqrt((angle - calib_angle) ** 2) for calib_angle in calibration_angles
+            math.sqrt((angle - calib_angle) ** 2 + (position - calib_head) ** 2)
+            for calib_angle, calib_head in zip(
+                calibration_angles, calibration_head_coordinates
+            )
         ]
-        weights = [1 / (distance + epsilon) for distance in distances]
-        numerator = sum(w * coord for w, coord in zip(weights, calibration_coordinates))
+        # Compute weights inversely proportional to the combined distance.
+        weights = [1 / (d + epsilon) for d in distances]
+        # Weighted sum of monitor coordinates.
+        numerator = sum(
+            w * coord for w, coord in zip(weights, calibration_monitor_coordinates)
+        )
         return numerator / sum(weights)
 
     def calculate_point_of_regard(
@@ -107,12 +117,14 @@ class InterpolationAgent(CalibrationAgent):
             head_x,
             theta,
             self.calibration_map.monitor_x_values,
+            self.calibration_map.head_x_values,
             self.calibration_map.theta_values,
         )
         y_screen = self._interpolate(
             head_y,
             phi,
             self.calibration_map.monitor_y_values,
+            self.calibration_map.head_y_values,
             self.calibration_map.phi_values,
         )
         return x_screen, y_screen

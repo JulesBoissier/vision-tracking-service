@@ -88,10 +88,12 @@ class VisionTrackingEngine:
         Returns:
             Tuple[float, float]: The predicted screen coordinates (x, y).
         """
-        _, _, theta, phi = self.gaze_predictor.predict_gaze_vector(image)
+        head_x, head_y, theta, phi = self.gaze_predictor.predict_gaze_vector(image)
 
         try:
-            screen_x, screen_y = self.cal_agent.calculate_point_of_regard(theta, phi)
+            screen_x, screen_y = self.cal_agent.calculate_point_of_regard(
+                head_x, head_y, theta, phi
+            )
 
         except ZeroDivisionError:
             print("Calibration profile is empty.")
