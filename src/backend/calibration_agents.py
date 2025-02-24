@@ -12,7 +12,7 @@ class CalibrationAgent(ABC):
 
     @abstractmethod
     def calculate_point_of_regard(
-        self, theta: float, phi: float
+        self, head_x: float, head_y: float, theta: float, phi: float
     ) -> Tuple[float, float]:
         """
         Calculate the point of regard on the screen.
@@ -65,6 +65,7 @@ class InterpolationAgent(CalibrationAgent):
 
     def _interpolate(
         self,
+        position: float,
         angle: float,
         calibration_coordinates: List[float],
         calibration_angles: List[float],
@@ -80,6 +81,7 @@ class InterpolationAgent(CalibrationAgent):
         Returns:
             float: Interpolated screen coordinate.
         """
+        # TODO: Multiply position and orientation in interpolation.
         epsilon = 1e-6
         distances = [
             math.sqrt((angle - calib_angle) ** 2) for calib_angle in calibration_angles
@@ -89,7 +91,7 @@ class InterpolationAgent(CalibrationAgent):
         return numerator / sum(weights)
 
     def calculate_point_of_regard(
-        self, theta: float, phi: float
+        self, head_x: float, head_y: float, theta: float, phi: float
     ) -> Tuple[float, float]:
         """
         Calculate the screen coordinates for a given gaze angle.
@@ -102,11 +104,15 @@ class InterpolationAgent(CalibrationAgent):
             Tuple[float, float]: Screen coordinates (x, y).
         """
         x_screen = self._interpolate(
+            head_x,
             theta,
             self.calibration_map.monitor_x_values,
             self.calibration_map.theta_values,
         )
         y_screen = self._interpolate(
-            phi, self.calibration_map.monitor_y_values, self.calibration_map.phi_values
+            head_y,
+            phi,
+            self.calibration_map.monitor_y_values,
+            self.calibration_map.phi_values,
         )
         return x_screen, y_screen
