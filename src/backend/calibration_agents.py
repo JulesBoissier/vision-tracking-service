@@ -12,7 +12,7 @@ class CalibrationAgent(ABC):
 
     @abstractmethod
     def calculate_point_of_regard(
-        self, theta: float, phi: float
+        self, head_x: float, head_y: float, theta: float, phi: float
     ) -> Tuple[float, float]:
         """
         Calculate the point of regard on the screen.
@@ -41,7 +41,15 @@ class InterpolationAgent(CalibrationAgent):
     def initialize_cal_map(self):
         self.calibration_map = CalibrationMap()
 
-    def calibration_step(self, x: float, y: float, theta: float, phi: float):
+    def calibration_step(
+        self,
+        monitor_x: float,
+        monitor_y: float,
+        head_x: float,
+        head_y: float,
+        theta: float,
+        phi: float,
+    ):
         """
         Add a calibration point during the calibration process.
 
@@ -51,35 +59,49 @@ class InterpolationAgent(CalibrationAgent):
             theta (float): Horizontal gaze angle.
             phi (float): Vertical gaze angle.
         """
-        self.calibration_map.add_calibration_point(x, y, theta, phi)
+        self.calibration_map.add_calibration_point(
+            monitor_x, monitor_y, head_x, head_y, theta, phi
+        )
 
     def _interpolate(
         self,
+        position: float,
         angle: float,
-        calibration_coordinates: List[float],
+        calibration_monitor_coordinates: List[float],
+        calibration_head_coordinates: List[float],
         calibration_angles: List[float],
     ) -> float:
         """
-        Interpolate the screen coordinate based on calibration data.
+        Interpolate the screen coordinate based on both head position and gaze angle.
 
         Args:
-            angle (float): The gaze angle to interpolate.
-            calibration_coordinates (List[float]): Corresponding screen coordinates.
+            position (float): The current head position.
+            angle (float): The current gaze angle.
+            calibration_monitor_coordinates (List[float]): Corresponding screen coordinates.
+            calibration_head_coordinates (List[float]): Corresponding head positions.
             calibration_angles (List[float]): Corresponding gaze angles.
 
         Returns:
             float: Interpolated screen coordinate.
         """
         epsilon = 1e-6
+        # Calculate the combined Euclidean distance in the (position, angle) space.
         distances = [
-            math.sqrt((angle - calib_angle) ** 2) for calib_angle in calibration_angles
+            math.sqrt((angle - calib_angle) ** 2 + (position - calib_head) ** 2)
+            for calib_angle, calib_head in zip(
+                calibration_angles, calibration_head_coordinates
+            )
         ]
-        weights = [1 / (distance + epsilon) for distance in distances]
-        numerator = sum(w * coord for w, coord in zip(weights, calibration_coordinates))
+        # Compute weights inversely proportional to the combined distance.
+        weights = [1 / (d + epsilon) for d in distances]
+        # Weighted sum of monitor coordinates.
+        numerator = sum(
+            w * coord for w, coord in zip(weights, calibration_monitor_coordinates)
+        )
         return numerator / sum(weights)
 
     def calculate_point_of_regard(
-        self, theta: float, phi: float
+        self, head_x: float, head_y: float, theta: float, phi: float
     ) -> Tuple[float, float]:
         """
         Calculate the screen coordinates for a given gaze angle.
@@ -92,9 +114,17 @@ class InterpolationAgent(CalibrationAgent):
             Tuple[float, float]: Screen coordinates (x, y).
         """
         x_screen = self._interpolate(
-            theta, self.calibration_map.x_values, self.calibration_map.theta_values
+            head_x,
+            theta,
+            self.calibration_map.monitor_x_values,
+            self.calibration_map.head_x_values,
+            self.calibration_map.theta_values,
         )
         y_screen = self._interpolate(
-            phi, self.calibration_map.y_values, self.calibration_map.phi_values
+            head_y,
+            phi,
+            self.calibration_map.monitor_y_values,
+            self.calibration_map.head_y_values,
+            self.calibration_map.phi_values,
         )
         return x_screen, y_screen
