@@ -33,6 +33,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
+@app.get("/health")
+def health_check():
+    return {"status": "OK"}
+
+
 @app.post("/save_profile")
 def save_current_profile(name: str):
     vision_engine = resources.get("vision_engine")
