@@ -33,6 +33,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
+@app.get("/health")
+def health_check():
+    return {"status": "OK"}
+
+
 @app.post("/save_profile")
 def save_current_profile(name: str):
     vision_engine = resources.get("vision_engine")
@@ -59,6 +64,13 @@ def delete_calibration_profile(profile_id: int):
     vision_engine = resources.get("vision_engine")
     vision_engine.delete_profile(profile_id)
     return {"message": "Profile deleted successfully."}
+
+
+@app.post("/reset_profile")
+def reset_calibration_profile():
+    vision_engine = resources.get("vision_engine")
+    vision_engine.cal_agent.initialize_cal_map()
+    return {"message": "Profile reset successfully."}
 
 
 @app.post("/cal_point")
