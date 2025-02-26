@@ -32,10 +32,14 @@ class InterpolationAgent(CalibrationAgent):
     An interpolation based implementation of a CalibrationAgent assuming static head position.
     """
 
-    def __init__(self):
+    def __init__(self, position_interpolation_weight: float = 1):
         """
         Initialize the InterpolationAgent.
         """
+
+        # Defines how much the head position is accounte for during interpolation
+        self.position_interpolation_weight = position_interpolation_weight
+
         self.initialize_cal_map()
 
     def initialize_cal_map(self):
@@ -87,7 +91,10 @@ class InterpolationAgent(CalibrationAgent):
         epsilon = 1e-6
         # Calculate the combined Euclidean distance in the (position, angle) space.
         distances = [
-            math.sqrt((angle - calib_angle) ** 2 + (position - calib_head) ** 2)
+            math.sqrt(
+                (angle - calib_angle) ** 2
+                + self.position_interpolation_weight * (position - calib_head) ** 2
+            )
             for calib_angle, calib_head in zip(
                 calibration_angles, calibration_head_coordinates
             )
