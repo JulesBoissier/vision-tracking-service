@@ -1,5 +1,5 @@
-# Use a lightweight Python base image
-FROM python:3.10-slim
+# Use a lightweight Python base image - bullseye is used to pin the Debian version.
+FROM python:3.10-slim-bullseye
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -8,6 +8,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     git \
     libgl1-mesa-glx \
+    #liggl1 \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
