@@ -8,15 +8,11 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     git \
     libgl1-mesa-glx \
-    #liggl1 \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Upgrade pip
 RUN pip install --upgrade pip
-
-# Install Git-based dependencies first
-RUN pip install git+https://github.com/edavalosanaya/L2CS-Net.git@4a0f978d5b4c426a7d37022d8c927d6ea031dcb6
 
 # Copy requirements file first (for better caching)
 COPY requirements.txt .
