@@ -7,7 +7,6 @@ loading the neural network.
 
 import pytest
 
-from src.backend.calibration_agents import InterpolationAgent
 from src.backend.vision_tracking_engine import VisionTrackingEngine
 
 CORNERS = {
@@ -29,7 +28,7 @@ def test_predicts_calibrated_screen_position(engine, fake_predictor):
 
     Why: this is the end-to-end promise of calibration. It also guards the argument order
     between engine, predictor and agent, which currently relies on two renamings cancelling
-    out (see CLAUDE.md).
+    out (see CLAUDE.md). Runs with both calibration agents.
     """
     calibrate(engine, fake_predictor)
 
@@ -61,11 +60,6 @@ def test_uncalibrated_engine_predicts_nothing(engine, fake_predictor):
     assert engine.predict_gaze_position(frame) == (None, None)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Known bug: a no-face calibration frame appends None values to the map, and every "
-    "later prediction then fails with TypeError and returns (None, None).",
-)
 def test_calibration_frame_without_face_does_not_poison_profile(engine, fake_predictor):
     """A calibration frame where no face is found is skipped, and the remaining points still work.
 
@@ -73,7 +67,9 @@ def test_calibration_frame_without_face_does_not_poison_profile(engine, fake_pre
     them is common and shouldn't silently make the whole profile unusable.
     """
     calibrate(engine, fake_predictor)
-    engine.run_single_calibration_step(960, 540, fake_predictor.script(90, None))
+    added = engine.run_single_calibration_step(960, 540, fake_predictor.script(90, None))
+
+    assert added is False
 
     x, y = engine.predict_gaze_position(fake_predictor.script(10, CORNERS[10][1]))
 
@@ -92,7 +88,7 @@ def test_saved_profile_restores_calibration_after_reset(engine, fake_predictor):
 
     engine.save_profile("desk")
     profile_id = engine.list_profiles()[0]["id"]
-    fresh = VisionTrackingEngine(fake_predictor, InterpolationAgent(), engine.cps)
+    fresh = VisionTrackingEngine(fake_predictor, type(engine.cal_agent)(), engine.cps)
     fresh.load_profile(profile_id)
 
     assert fresh.predict_gaze_position(probe) == pytest.approx(expected)
