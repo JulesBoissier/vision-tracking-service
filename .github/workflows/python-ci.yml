@@ -30,7 +30,7 @@ jobs:
     - name: Install other dependencies
       run: |
         pip install -r requirements.txt
-        pip install pytest
+        pip install pytest httpx
 
     - name: Run unit tests
       run: |
