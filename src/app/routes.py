@@ -3,13 +3,13 @@ from contextlib import asynccontextmanager
 
 import cv2
 import numpy as np
-from fastapi import FastAPI, File, Form, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 
 from src.app.models import GazePredictionResponse, ProfileListResponse
 from src.backend.calibration_agents import InterpolationAgent, LinearCalibrationAgent
 from src.backend.calibration_profile_store import CalibrationProfileStore
 from src.backend.gaze_predictor import GazePredictor
-from src.backend.vision_tracking_engine import VisionTrackingEngine
+from src.backend.vision_tracking_engine import ProfileNotFoundError, VisionTrackingEngine
 
 # Dictionary to hold the VisionTrackingEngine instance
 resources = {}
@@ -58,7 +58,13 @@ def list_calibration_profiles():
 @app.post("/load_profile")
 def load_calibration_profile(profile_id: int):
     vision_engine = resources.get("vision_engine")
-    vision_engine.load_profile(profile_id)
+    try:
+        vision_engine.load_profile(profile_id)
+    except ProfileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No profile with id {profile_id}; the active calibration is unchanged.",
+        )
     return {"message": "Profile loaded successfully."}
 
 
@@ -72,7 +78,7 @@ def delete_calibration_profile(profile_id: int):
 @app.post("/reset_profile")
 def reset_calibration_profile():
     vision_engine = resources.get("vision_engine")
-    vision_engine.cal_agent.initialize_cal_map()
+    vision_engine.reset_profile()
     return {"message": "Profile reset successfully."}
 
 

@@ -1,3 +1,4 @@
+import threading
 from typing import List, Tuple
 
 import numpy as np
@@ -5,6 +6,10 @@ import numpy as np
 from src.backend.calibration_agents import CalibrationAgent, NotCalibratedError
 from src.backend.calibration_profile_store import CalibrationProfileStore
 from src.backend.gaze_predictor import GazePredictor
+
+
+class ProfileNotFoundError(KeyError):
+    """Raised when loading a profile id that doesn't exist."""
 
 
 class VisionTrackingEngine:
@@ -29,12 +34,27 @@ class VisionTrackingEngine:
         self.gaze_predictor = gaze_predictor
         self.cal_agent = cal_agent
         self.cps = cps
+        # Serialises everything that reads or replaces the calibration. FastAPI runs sync
+        # routes (load/reset/save) in a thread pool, concurrently with calibration and
+        # prediction. Gaze inference itself runs outside the lock.
+        self._lock = threading.RLock()
 
     def save_profile(self, name):
-        self.cps.save_profile(name, self.cal_agent.calibration_map)
+        with self._lock:
+            self.cps.save_profile(name, self.cal_agent.calibration_map)
 
     def load_profile(self, id):
-        self.cal_agent.calibration_map = self.cps.load_profile(id)
+        """Make a saved profile the active calibration. Unknown ids leave it unchanged."""
+        calibration_map = self.cps.load_profile(id)
+        if calibration_map is None:
+            raise ProfileNotFoundError(id)
+        with self._lock:
+            self.cal_agent.calibration_map = calibration_map
+
+    def reset_profile(self):
+        """Discard the active calibration."""
+        with self._lock:
+            self.cal_agent.initialize_cal_map()
 
     def list_profiles(self):
         return self.cps.list_profiles()
@@ -57,7 +77,8 @@ class VisionTrackingEngine:
         head_x, head_y, theta, phi = self.gaze_predictor.predict_gaze_vector(frame)
         if theta is None or phi is None:
             return False
-        self.cal_agent.calibration_step(screen_x, screen_y, head_x, head_y, theta, phi)
+        with self._lock:
+            self.cal_agent.calibration_step(screen_x, screen_y, head_x, head_y, theta, phi)
         return True
 
     def run_calibration_steps(
@@ -93,9 +114,10 @@ class VisionTrackingEngine:
             return None, None  # no face detected
 
         try:
-            screen_x, screen_y = self.cal_agent.calculate_point_of_regard(
-                head_x, head_y, theta, phi
-            )
+            with self._lock:
+                screen_x, screen_y = self.cal_agent.calculate_point_of_regard(
+                    head_x, head_y, theta, phi
+                )
         except (NotCalibratedError, ZeroDivisionError):
             # No calibration points yet (ZeroDivisionError comes from InterpolationAgent).
             return None, None

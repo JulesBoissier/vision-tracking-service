@@ -36,7 +36,7 @@ Tests cover behaviour at three levels: the calibration agents (calibration maths
 
 ## API
 
-`GET /health`, `POST /cal_point` (form `x`, `y`, `file`), `POST /predict` (form `file`) → `{"prediction": [x, y]}`, `POST /save_profile?name=`, `GET /list_profiles`, `POST /load_profile?profile_id=`, `POST /delete_profile?profile_id=`, `POST /reset_profile`. These shapes are a contract with the orchestrator — change both repos together.
+`GET /health`, `POST /cal_point` (form `x`, `y`, `file`), `POST /predict` (form `file`) → `{"prediction": [x, y]}`, `POST /save_profile?name=`, `GET /list_profiles`, `POST /load_profile?profile_id=` (404 if unknown; the active calibration is kept), `POST /delete_profile?profile_id=`, `POST /reset_profile`. These shapes are a contract with the orchestrator — change both repos together.
 
 ## How prediction works
 
@@ -58,7 +58,7 @@ Further gains need better inputs, not a better calibration fit: multi-frame burs
 - **Changing the calibration model invalidates benchmark baselines.** Run both benchmarks with `--compare` (`../attention-benchmark`) and keep the agent's tests' "Why" sections in mind.
 - **Pickled profiles:** `CalibrationMap` is pickled into SQLite. Moving/renaming the class or its module breaks loading existing profiles. Add fields with defaults only.
 - **docker-compose mounts the named volume over the whole `/app`**, not just the DB. After the first run, the volume's copy of the code shadows the image, so `docker compose up --build` won't pick up code changes until the volume is removed (`docker compose down -v`, which also deletes saved profiles).
-- **Single global stateful engine:** one active calibration map shared by all clients. Built for a single user; not safe for concurrent calibration.
-- **No face / not calibrated:** the engine returns `[null, null]` when the predictor finds no face, or when the agent raises `NotCalibratedError` (`ZeroDivisionError` for the IDW agent). `/cal_point` skips no-face frames and answers `"added": false` (status 200). `load_profile` with an unknown id still sets the map to `{}`, which breaks later predictions (IMPROVEMENTS 1.7).
+- **Single global stateful engine:** one active calibration map shared by all clients, built for a single user. An `RLock` in `VisionTrackingEngine` serialises everything that reads or replaces the calibration (sync profile routes run in a thread pool next to calibration and prediction); gaze inference runs outside it. Go through engine methods (`reset_profile`, `load_profile`, …), not `engine.cal_agent` directly, or the lock is bypassed.
+- **No face / not calibrated:** the engine returns `[null, null]` when the predictor finds no face, or when the agent raises `NotCalibratedError` (`ZeroDivisionError` for the IDW agent). `/cal_point` skips no-face frames and answers `"added": false` (status 200).
 - Inference is pinned to CPU (`torch.device("cpu")`) even though CUDA wheels are in `requirements.txt` on `main` (`develop` trims requirements to direct deps).
 - `/reset_profile` ignores the `profile_id` the client sends.
