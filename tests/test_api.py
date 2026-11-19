@@ -132,3 +132,19 @@ def test_calibration_frame_without_face_is_reported_and_skipped(api, fake_predic
     assert api.post("/predict", files=upload(make_frame(20))).json()["prediction"] == pytest.approx(
         [1920, 0], abs=1
     )
+
+
+def test_loading_unknown_profile_is_not_found_and_harmless(api, fake_predictor):
+    """``/load_profile`` with an unknown id answers 404 and the active calibration keeps working.
+
+    Why: the orchestrator passes whatever id the user typed. A 404 tells it the id was
+    wrong; previously it got 200 and the service silently lost its calibration.
+    """
+    calibrate(api, fake_predictor)
+
+    r = api.post("/load_profile", params={"profile_id": 9999})
+
+    assert r.status_code == 404
+    assert api.post("/predict", files=upload(make_frame(20))).json()["prediction"] == pytest.approx(
+        [1920, 0], abs=1
+    )

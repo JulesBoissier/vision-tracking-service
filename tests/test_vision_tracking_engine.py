@@ -5,9 +5,11 @@ The engine is the unit the HTTP routes delegate to. These tests use ``FakeGazePr
 loading the neural network.
 """
 
+import threading
+
 import pytest
 
-from src.backend.vision_tracking_engine import VisionTrackingEngine
+from src.backend.vision_tracking_engine import ProfileNotFoundError, VisionTrackingEngine
 
 CORNERS = {
     10: ((0, 0), (320, 240, -0.4, -0.3)),
@@ -112,3 +114,57 @@ def test_profiles_can_be_listed_and_deleted(engine, fake_predictor):
     assert [p["profile_name"] for p in engine.list_profiles()] == [
         profiles[1]["profile_name"]
     ]
+
+
+def test_loading_unknown_profile_keeps_current_calibration(engine, fake_predictor):
+    """Loading a profile id that doesn't exist raises and leaves the active calibration in place.
+
+    Why: an id typed wrong at the orchestrator's prompt, or a profile deleted meanwhile,
+    used to install an empty map and silently break every prediction. Keeping the current
+    calibration makes the mistake harmless and visible.
+    """
+    calibrate(engine, fake_predictor)
+
+    with pytest.raises(ProfileNotFoundError):
+        engine.load_profile(9999)
+
+    frame = fake_predictor.script(10, CORNERS[10][1])
+    assert engine.predict_gaze_position(frame) == pytest.approx((0, 0), abs=1)
+
+
+def test_profile_changes_wait_for_in_flight_predictions(engine, fake_predictor):
+    """A reset requested while a prediction is being computed waits until it has finished.
+
+    Why: FastAPI runs profile routes (load, reset, save) in a thread pool, concurrently
+    with calibration and prediction. Swapping the calibration mid-prediction could mix two
+    profiles in one answer or fail on half-updated data. The engine serialises them.
+    """
+    calibrate(engine, fake_predictor)
+    entered, release = threading.Event(), threading.Event()
+    real = engine.cal_agent.calculate_point_of_regard
+
+    def slow_prediction(*args):
+        entered.set()
+        release.wait(5)
+        return real(*args)
+
+    engine.cal_agent.calculate_point_of_regard = slow_prediction
+    order = []
+    predictor = threading.Thread(
+        target=lambda: order.append(
+            ("predicted", engine.predict_gaze_position(fake_predictor.script(10, CORNERS[10][1])))
+        )
+    )
+    predictor.start()
+    assert entered.wait(5)
+
+    resetter = threading.Thread(target=lambda: (engine.reset_profile(), order.append(("reset", None))))
+    resetter.start()
+    resetter.join(0.3)
+    assert resetter.is_alive(), "reset ran while a prediction was in flight"
+
+    release.set()
+    predictor.join(5)
+    resetter.join(5)
+    assert [step for step, _ in order] == ["predicted", "reset"]
+    assert order[0][1] == pytest.approx((0, 0), abs=1)
