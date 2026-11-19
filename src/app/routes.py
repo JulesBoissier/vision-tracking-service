@@ -90,9 +90,12 @@ async def add_calibration_point(
 
     vision_engine = resources.get("vision_engine")
 
-    vision_engine.run_single_calibration_step(x, y, frame)
+    added = vision_engine.run_single_calibration_step(x, y, frame)
+    if not added:
+        return {"message": "No face detected; calibration point skipped.", "added": False}
     return {
-        "message": f"Calibration point added successfully with parameters x: {x}, y: {y}."
+        "message": f"Calibration point added successfully with parameters x: {x}, y: {y}.",
+        "added": True,
     }
 
 

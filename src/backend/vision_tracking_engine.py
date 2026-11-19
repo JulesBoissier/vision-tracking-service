@@ -43,22 +43,22 @@ class VisionTrackingEngine:
         self.cps.delete_profile(id)
 
     def run_single_calibration_step(
-        self, head_x: float, head_y: float, frame: np.ndarray
-    ):
+        self, screen_x: float, screen_y: float, frame: np.ndarray
+    ) -> bool:
         """
-        Perform a single calibration step using GazePredictor and CalibrationAgent.
+        Add one calibration point: the user was looking at (screen_x, screen_y) in ``frame``.
 
-        Args:
-            x (float): X coordinate on the screen.
-            y (float): Y coordinate on the screen.
-            frame (np.ndarray): The input image for gaze prediction.
+        Frames where no face is detected are skipped, because a point without gaze features
+        would make every later prediction fail.
+
+        Returns:
+            bool: True if the point was added, False if no face was found.
         """
-        monitor_x, monitor_y, theta, phi = self.gaze_predictor.predict_gaze_vector(
-            frame
-        )
-        self.cal_agent.calibration_step(
-            head_x, head_y, monitor_x, monitor_y, theta, phi
-        )
+        head_x, head_y, theta, phi = self.gaze_predictor.predict_gaze_vector(frame)
+        if theta is None or phi is None:
+            return False
+        self.cal_agent.calibration_step(screen_x, screen_y, head_x, head_y, theta, phi)
+        return True
 
     def run_calibration_steps(
         self, calibration_data: List[Tuple[int, int, np.ndarray]]
@@ -89,16 +89,13 @@ class VisionTrackingEngine:
             Tuple[float, float]: The predicted screen coordinates (x, y).
         """
         head_x, head_y, theta, phi = self.gaze_predictor.predict_gaze_vector(image)
+        if theta is None or phi is None:
+            return None, None  # no face detected
 
         try:
             screen_x, screen_y = self.cal_agent.calculate_point_of_regard(
                 head_x, head_y, theta, phi
             )
-
         except ZeroDivisionError:
-            print("Calibration profile is empty.")
-            screen_x, screen_y = None, None
-        except TypeError:
-            print("No face detected.")
-            screen_x, screen_y = None, None
+            return None, None  # no calibration points yet
         return screen_x, screen_y

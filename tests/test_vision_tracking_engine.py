@@ -61,11 +61,6 @@ def test_uncalibrated_engine_predicts_nothing(engine, fake_predictor):
     assert engine.predict_gaze_position(frame) == (None, None)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Known bug: a no-face calibration frame appends None values to the map, and every "
-    "later prediction then fails with TypeError and returns (None, None).",
-)
 def test_calibration_frame_without_face_does_not_poison_profile(engine, fake_predictor):
     """A calibration frame where no face is found is skipped, and the remaining points still work.
 
@@ -73,7 +68,9 @@ def test_calibration_frame_without_face_does_not_poison_profile(engine, fake_pre
     them is common and shouldn't silently make the whole profile unusable.
     """
     calibrate(engine, fake_predictor)
-    engine.run_single_calibration_step(960, 540, fake_predictor.script(90, None))
+    added = engine.run_single_calibration_step(960, 540, fake_predictor.script(90, None))
+
+    assert added is False
 
     x, y = engine.predict_gaze_position(fake_predictor.script(10, CORNERS[10][1]))
 

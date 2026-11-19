@@ -44,11 +44,10 @@ Tests cover behaviour at three levels: `InterpolationAgent` (calibration maths),
 
 ## Gotchas
 
-- **Confusing parameter names in the calibration path.** `VisionTrackingEngine.run_single_calibration_step(head_x, head_y, frame)` actually receives *monitor* coordinates, and the predictor's head position is unpacked into variables named `monitor_x, monitor_y`. The two swaps cancel out and `CalibrationMap` ends up correct. If you rename, rename everything together and keep `test_calibration_agents.py` green.
 - **Pickled profiles:** `CalibrationMap` is pickled into SQLite. Moving/renaming the class or its module breaks loading existing profiles. Add fields with defaults only.
 - **docker-compose mounts the named volume over the whole `/app`**, not just the DB. After the first run, the volume's copy of the code shadows the image, so `docker compose up --build` won't pick up code changes until the volume is removed (`docker compose down -v`, which also deletes saved profiles).
 - **Single global stateful engine:** one active calibration map shared by all clients. Built for a single user; not safe for concurrent calibration.
-- **Error handling is by exception type:** no face → predictor returns `None`s → `TypeError` inside the agent → `[null, null]`; empty profile → `ZeroDivisionError` → `[null, null]`. `/cal_point` with no face adds `None` values to the map, which makes **every** later prediction return `[null, null]` (see the xfail test). `load_profile` with an unknown id sets the map to `{}`, which breaks later predictions.
+- **No face / not calibrated:** the engine returns `[null, null]` when the predictor finds no face, or when the agent has no calibration points (`ZeroDivisionError` inside `InterpolationAgent`). `/cal_point` skips no-face frames and answers `"added": false` (status 200). `load_profile` with an unknown id sets the map to `{}`, which breaks later predictions (IMPROVEMENTS 1.7).
 - Head position is in pixels and gaze angles are in radians, so `position_interpolation_weight` (default 1) lets head movement dominate the distance. Tune it with that in mind.
 - Inference is pinned to CPU (`torch.device("cpu")`) even though CUDA wheels are in `requirements.txt` on `main` (`develop` trims requirements to direct deps).
 - `/reset_profile` ignores the `profile_id` the client sends.
