@@ -6,7 +6,7 @@ import numpy as np
 from fastapi import FastAPI, File, Form, UploadFile
 
 from src.app.models import GazePredictionResponse, ProfileListResponse
-from src.backend.calibration_agents import InterpolationAgent
+from src.backend.calibration_agents import InterpolationAgent, LinearCalibrationAgent
 from src.backend.calibration_profile_store import CalibrationProfileStore
 from src.backend.gaze_predictor import GazePredictor
 from src.backend.vision_tracking_engine import VisionTrackingEngine
@@ -19,7 +19,10 @@ resources = {}
 async def lifespan(app: FastAPI):
     # Initialize the VisionTrackingEngine
 
-    ia = InterpolationAgent()
+    # CALIBRATION_AGENT=idw selects the previous inverse-distance interpolation, for A/B
+    # comparisons on the benchmark. The default robust linear agent is far more accurate.
+    agent_name = os.getenv("CALIBRATION_AGENT", "linear").lower()
+    ia = InterpolationAgent() if agent_name == "idw" else LinearCalibrationAgent()
     cps = CalibrationProfileStore(db_url="sqlite:///calibration.db")
     gp = GazePredictor(filepath=os.path.join("models", "L2CSNet_gaze360.pkl"))
     resources["vision_engine"] = VisionTrackingEngine(gp, ia, cps)
@@ -90,9 +93,12 @@ async def add_calibration_point(
 
     vision_engine = resources.get("vision_engine")
 
-    vision_engine.run_single_calibration_step(x, y, frame)
+    added = vision_engine.run_single_calibration_step(x, y, frame)
+    if not added:
+        return {"message": "No face detected; calibration point skipped.", "added": False}
     return {
-        "message": f"Calibration point added successfully with parameters x: {x}, y: {y}."
+        "message": f"Calibration point added successfully with parameters x: {x}, y: {y}.",
+        "added": True,
     }
 
 

@@ -17,7 +17,7 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
-from src.backend.calibration_agents import InterpolationAgent
+from src.backend.calibration_agents import InterpolationAgent, LinearCalibrationAgent
 from src.backend.calibration_profile_store import CalibrationProfileStore
 from src.backend.vision_tracking_engine import VisionTrackingEngine
 
@@ -67,9 +67,11 @@ def store(tmp_path) -> CalibrationProfileStore:
     return CalibrationProfileStore(db_url=f"sqlite:///{tmp_path / 'calibration.db'}")
 
 
-@pytest.fixture
-def engine(fake_predictor, store) -> VisionTrackingEngine:
-    return VisionTrackingEngine(fake_predictor, InterpolationAgent(), store)
+@pytest.fixture(params=["idw", "linear"])
+def engine(request, fake_predictor, store) -> VisionTrackingEngine:
+    """An engine with each calibration agent: engine behaviour must not depend on the agent."""
+    agent = InterpolationAgent() if request.param == "idw" else LinearCalibrationAgent()
+    return VisionTrackingEngine(fake_predictor, agent, store)
 
 
 @pytest.fixture
