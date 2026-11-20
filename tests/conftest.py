@@ -75,19 +75,16 @@ def engine(request, fake_predictor, store) -> VisionTrackingEngine:
 
 
 @pytest.fixture
-def api(monkeypatch, tmp_path, fake_predictor):
-    """A ``TestClient`` running the real app with a fake predictor and a temporary database.
+def api(tmp_path, fake_predictor):
+    """A ``TestClient`` for an app built around an injected engine.
 
-    The app currently builds its engine inside ``lifespan`` from module-level names, so the
-    seam is to patch those names. If the app moves to an app factory or dependency injection,
-    only this fixture needs to change.
+    The engine has the default calibration agent, a fake predictor and a temporary
+    database. ``create_app(engine=...)`` replaces the monkey-patching this fixture needed
+    when the app was a module-level global.
     """
-    import src.app.routes as routes
+    from src.app.routes import create_app
 
-    db_url = f"sqlite:///{tmp_path / 'api.db'}"
-    monkeypatch.setattr(routes, "GazePredictor", lambda filepath: fake_predictor)
-    monkeypatch.setattr(
-        routes, "CalibrationProfileStore", lambda db_url_=None, **_: CalibrationProfileStore(db_url)
-    )
-    with TestClient(routes.app) as client:
+    store = CalibrationProfileStore(db_url=f"sqlite:///{tmp_path / 'api.db'}")
+    engine = VisionTrackingEngine(fake_predictor, LinearCalibrationAgent(), store)
+    with TestClient(create_app(engine=engine)) as client:
         yield client
