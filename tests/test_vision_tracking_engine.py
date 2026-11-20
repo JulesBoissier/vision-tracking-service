@@ -143,10 +143,10 @@ def test_profile_changes_wait_for_in_flight_predictions(engine, fake_predictor):
     entered, release = threading.Event(), threading.Event()
     real = engine.cal_agent.calculate_point_of_regard
 
-    def slow_prediction(*args):
+    def slow_prediction(*args, **kwargs):
         entered.set()
         release.wait(5)
-        return real(*args)
+        return real(*args, **kwargs)
 
     engine.cal_agent.calculate_point_of_regard = slow_prediction
     order = []

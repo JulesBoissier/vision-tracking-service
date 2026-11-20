@@ -5,7 +5,7 @@ ML gaze tracking service: given a webcam image, predicts the on-screen Point of 
 ## Layout
 
 - `main.py` — imports `app` from `src.app.routes`; runs uvicorn on 127.0.0.1:8000 when run directly. The Dockerfile runs `uvicorn main:app` on 0.0.0.0:8000.
-- `src/settings.py` — `Settings.from_env()`: `CALIBRATION_AGENT` (`linear`/`idw`), `MODEL_PATH`, `CALIBRATION_DB_URL`. The only place that reads the environment. The Docker image sets `CALIBRATION_DB_URL=sqlite:////app/data/calibration.db`.
+- `src/settings.py` — `Settings.from_env()`: `CALIBRATION_AGENT` (`linear`/`idw`), `CALIBRATION_DISTANCE_TERM` (default on), `MODEL_PATH`, `CALIBRATION_DB_URL`. The only place that reads the environment. The Docker image sets `CALIBRATION_DB_URL=sqlite:////app/data/calibration.db`.
 - `src/app/routes.py` — app factory `create_app(settings=None, engine=None)`: routes on an `APIRouter`, the engine on `app.state.engine` (built at startup by `build_engine(settings)` unless injected), reached through the `get_engine` dependency. Module-level `app = create_app()` is what `main.py`/uvicorn serve.
 - `src/app/models.py` — Pydantic response models.
 - `src/backend/vision_tracking_engine.py` — facade composing the three components below.
@@ -51,6 +51,8 @@ Why the switch (attention-benchmark, see `../docs/IMPROVEMENTS.md` 3.1): median 
 - head-position features break when posture changes between calibration and use;
 - averaging calibration frames and polynomial terms didn't help;
 - about 290 px (leave-one-out) is the single-frame precision ceiling of this camera (640×480, face ~120 px wide) and model.
+
+**Distance:** the predictor also reports face width (`predict_gaze_features`), stored per calibration point (`CalibrationMap.face_widths()`, padded with `None` for profiles saved before it existed). The linear agent adds `1/face_width` as a third feature when every point has a width, otherwise angles only. Burst benchmark: single 294/456 → 265/377 px median/p90, three monitors 277/593 → 271/564 px. Recalibrate to benefit; `CALIBRATION_DISTANCE_TERM=0` restores angles only exactly.
 
 **Bursts:** `VisionTrackingEngine.predict_from_frames` averages head position and angles over the frames with a face, then maps once. 3 frames: median 295→277 px and right monitor 80→83% (three monitors); single monitor p90 485→456 px. Averaging features beat the median of per-frame predictions; averaging calibration frames (3.4) gave nothing and isn't implemented.
 

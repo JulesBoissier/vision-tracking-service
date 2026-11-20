@@ -74,11 +74,13 @@ class VisionTrackingEngine:
         Returns:
             bool: True if the point was added, False if no face was found.
         """
-        head_x, head_y, theta, phi = self.gaze_predictor.predict_gaze_vector(frame)
+        head_x, head_y, theta, phi, face_width = self.gaze_predictor.predict_gaze_features(frame)
         if theta is None or phi is None:
             return False
         with self._lock:
-            self.cal_agent.calibration_step(screen_x, screen_y, head_x, head_y, theta, phi)
+            self.cal_agent.calibration_step(
+                screen_x, screen_y, head_x, head_y, theta, phi, face_width=face_width
+            )
         return True
 
     def run_calibration_steps(
@@ -115,18 +117,20 @@ class VisionTrackingEngine:
 
         Returns ``(None, None)`` when no frame has a face or nothing is calibrated.
         """
-        features = [self.gaze_predictor.predict_gaze_vector(f) for f in frames]
+        features = [self.gaze_predictor.predict_gaze_features(f) for f in frames]
         features = [f for f in features if f[2] is not None and f[3] is not None]
         if not features:
             return None, None  # no face detected in any frame
         head_x, head_y, theta, phi = (
             float(np.mean([f[i] for f in features])) for i in range(4)
         )
+        widths = [f[4] for f in features if f[4]]
+        face_width = float(np.mean(widths)) if widths else None
 
         try:
             with self._lock:
                 screen_x, screen_y = self.cal_agent.calculate_point_of_regard(
-                    head_x, head_y, theta, phi
+                    head_x, head_y, theta, phi, face_width=face_width
                 )
         except (NotCalibratedError, ZeroDivisionError):
             # No calibration points yet (ZeroDivisionError comes from InterpolationAgent).

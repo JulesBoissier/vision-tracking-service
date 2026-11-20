@@ -13,6 +13,8 @@ class Settings:
     # Relative paths are resolved from the working directory. The Docker image sets
     # sqlite:////app/data/calibration.db, inside the volume.
     calibration_db_url: str = "sqlite:///calibration.db"
+    # Linear agent: use face width (distance to the camera) as a calibration feature.
+    calibration_distance_term: bool = True
 
     @classmethod
     def from_env(cls, env: Optional[Mapping[str, str]] = None) -> "Settings":
@@ -21,4 +23,6 @@ class Settings:
             calibration_agent=env.get("CALIBRATION_AGENT", cls.calibration_agent).lower(),
             model_path=env.get("MODEL_PATH", cls.model_path),
             calibration_db_url=env.get("CALIBRATION_DB_URL", cls.calibration_db_url),
+            calibration_distance_term=env.get("CALIBRATION_DISTANCE_TERM", "1").strip().lower()
+            not in ("0", "false", "no", "off"),
         )

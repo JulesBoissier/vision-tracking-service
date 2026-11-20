@@ -19,6 +19,8 @@ def test_settings_defaults_and_environment():
     benchmark switches ``CALIBRATION_AGENT`` for A/B runs. Nothing else reads the environment.
     """
     assert Settings.from_env({}) == Settings()
+    assert Settings.from_env({"CALIBRATION_DISTANCE_TERM": "0"}).calibration_distance_term is False
+    assert Settings().calibration_distance_term is True
     s = Settings.from_env(
         {"CALIBRATION_AGENT": "IDW", "MODEL_PATH": "/m.pkl", "CALIBRATION_DB_URL": "sqlite:////d/c.db"}
     )
