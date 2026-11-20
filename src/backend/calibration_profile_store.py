@@ -49,12 +49,12 @@ class CalibrationProfileStore:
         session.commit()
         session.close()
 
-    def load_profile(self, profile_id: int) -> dict:
-        """Load a calibration profile by ID."""
+    def load_profile(self, profile_id: int):
+        """Load a calibration profile's map by ID, or ``None`` if no such profile exists."""
         session = self.Session()
         profile = session.query(CalibrationProfile).filter_by(id=profile_id).first()
         session.close()
-        return profile.calibration_map if profile else {}
+        return profile.calibration_map if profile else None
 
     def list_profiles(self) -> list:
         """Return a list of available profiles with their IDs and names."""

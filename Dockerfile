@@ -1,5 +1,6 @@
-# Use a lightweight Python base image - bullseye is used to pin the Debian version.
-FROM python:3.10-slim-bullseye
+# Use a lightweight Python base image, pinned to a Debian release. Bullseye's security
+# archive no longer serves the packages below, so bullseye images can't be built any more.
+FROM python:3.10-slim-bookworm
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -7,7 +8,7 @@ WORKDIR /app
 # Install system dependencies required by OpenCV & Git
 RUN apt-get update && apt-get install -y \
     git \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 

@@ -1,10 +1,15 @@
+import threading
 from typing import List, Tuple
 
 import numpy as np
 
-from src.backend.calibration_agents import CalibrationAgent
+from src.backend.calibration_agents import CalibrationAgent, NotCalibratedError
 from src.backend.calibration_profile_store import CalibrationProfileStore
 from src.backend.gaze_predictor import GazePredictor
+
+
+class ProfileNotFoundError(KeyError):
+    """Raised when loading a profile id that doesn't exist."""
 
 
 class VisionTrackingEngine:
@@ -29,12 +34,27 @@ class VisionTrackingEngine:
         self.gaze_predictor = gaze_predictor
         self.cal_agent = cal_agent
         self.cps = cps
+        # Serialises everything that reads or replaces the calibration. FastAPI runs sync
+        # routes (load/reset/save) in a thread pool, concurrently with calibration and
+        # prediction. Gaze inference itself runs outside the lock.
+        self._lock = threading.RLock()
 
     def save_profile(self, name):
-        self.cps.save_profile(name, self.cal_agent.calibration_map)
+        with self._lock:
+            self.cps.save_profile(name, self.cal_agent.calibration_map)
 
     def load_profile(self, id):
-        self.cal_agent.calibration_map = self.cps.load_profile(id)
+        """Make a saved profile the active calibration. Unknown ids leave it unchanged."""
+        calibration_map = self.cps.load_profile(id)
+        if calibration_map is None:
+            raise ProfileNotFoundError(id)
+        with self._lock:
+            self.cal_agent.calibration_map = calibration_map
+
+    def reset_profile(self):
+        """Discard the active calibration."""
+        with self._lock:
+            self.cal_agent.initialize_cal_map()
 
     def list_profiles(self):
         return self.cps.list_profiles()
@@ -43,22 +63,23 @@ class VisionTrackingEngine:
         self.cps.delete_profile(id)
 
     def run_single_calibration_step(
-        self, head_x: float, head_y: float, frame: np.ndarray
-    ):
+        self, screen_x: float, screen_y: float, frame: np.ndarray
+    ) -> bool:
         """
-        Perform a single calibration step using GazePredictor and CalibrationAgent.
+        Add one calibration point: the user was looking at (screen_x, screen_y) in ``frame``.
 
-        Args:
-            x (float): X coordinate on the screen.
-            y (float): Y coordinate on the screen.
-            frame (np.ndarray): The input image for gaze prediction.
+        Frames where no face is detected are skipped, because a point without gaze features
+        would make every later prediction fail.
+
+        Returns:
+            bool: True if the point was added, False if no face was found.
         """
-        monitor_x, monitor_y, theta, phi = self.gaze_predictor.predict_gaze_vector(
-            frame
-        )
-        self.cal_agent.calibration_step(
-            head_x, head_y, monitor_x, monitor_y, theta, phi
-        )
+        head_x, head_y, theta, phi = self.gaze_predictor.predict_gaze_vector(frame)
+        if theta is None or phi is None:
+            return False
+        with self._lock:
+            self.cal_agent.calibration_step(screen_x, screen_y, head_x, head_y, theta, phi)
+        return True
 
     def run_calibration_steps(
         self, calibration_data: List[Tuple[int, int, np.ndarray]]
@@ -89,16 +110,15 @@ class VisionTrackingEngine:
             Tuple[float, float]: The predicted screen coordinates (x, y).
         """
         head_x, head_y, theta, phi = self.gaze_predictor.predict_gaze_vector(image)
+        if theta is None or phi is None:
+            return None, None  # no face detected
 
         try:
-            screen_x, screen_y = self.cal_agent.calculate_point_of_regard(
-                head_x, head_y, theta, phi
-            )
-
-        except ZeroDivisionError:
-            print("Calibration profile is empty.")
-            screen_x, screen_y = None, None
-        except TypeError:
-            print("No face detected.")
-            screen_x, screen_y = None, None
+            with self._lock:
+                screen_x, screen_y = self.cal_agent.calculate_point_of_regard(
+                    head_x, head_y, theta, phi
+                )
+        except (NotCalibratedError, ZeroDivisionError):
+            # No calibration points yet (ZeroDivisionError comes from InterpolationAgent).
+            return None, None
         return screen_x, screen_y
