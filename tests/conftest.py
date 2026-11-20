@@ -21,7 +21,7 @@ from src.backend.calibration_agents import InterpolationAgent, LinearCalibration
 from src.backend.calibration_profile_store import CalibrationProfileStore
 from src.backend.vision_tracking_engine import VisionTrackingEngine
 
-Features = Tuple[float, float, float, float]  # head_x, head_y, theta, phi
+Features = Tuple[float, ...]  # head_x, head_y, theta, phi[, face_width]
 
 
 def make_frame(code: int) -> np.ndarray:
@@ -49,12 +49,16 @@ class FakeGazePredictor:
         self.features[code] = features
         return make_frame(code)
 
-    def predict_gaze_vector(self, image: np.ndarray):
+    def predict_gaze_features(self, image: np.ndarray):
+        """``(head_x, head_y, theta, phi, face_width)``; scripts may omit the face width."""
         code = int(round(float(image.mean()) / 10.0) * 10)
         features = self.features[code]
         if features is None:
-            return None, None, None, None
-        return features
+            return None, None, None, None, None
+        return tuple(features) + (None,) * (5 - len(features))
+
+    def predict_gaze_vector(self, image: np.ndarray):
+        return self.predict_gaze_features(image)[:4]
 
 
 @pytest.fixture

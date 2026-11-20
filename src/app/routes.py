@@ -19,7 +19,11 @@ def build_engine(settings: Settings) -> VisionTrackingEngine:
     """The production engine: the real L2CS model, the configured agent and profile store."""
     # CALIBRATION_AGENT=idw selects the previous inverse-distance interpolation, for A/B
     # comparisons on the benchmark. The default robust linear agent is far more accurate.
-    agent = InterpolationAgent() if settings.calibration_agent == "idw" else LinearCalibrationAgent()
+    agent = (
+        InterpolationAgent()
+        if settings.calibration_agent == "idw"
+        else LinearCalibrationAgent(use_distance=settings.calibration_distance_term)
+    )
     return VisionTrackingEngine(
         GazePredictor(filepath=settings.model_path),
         agent,
@@ -115,7 +119,7 @@ async def add_calibration_point(
     # Decode the image array into an OpenCV image (BGR format)
     frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-    added =vision_engine.run_single_calibration_step(x, y, frame)
+    added = vision_engine.run_single_calibration_step(x, y, frame)
     if not added:
         return {"message": "No face detected; calibration point skipped.", "added": False}
     return {

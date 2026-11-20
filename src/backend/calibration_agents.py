@@ -12,7 +12,7 @@ class CalibrationAgent(ABC):
 
     @abstractmethod
     def calculate_point_of_regard(
-        self, head_x: float, head_y: float, theta: float, phi: float
+        self, head_x: float, head_y: float, theta: float, phi: float, face_width=None
     ) -> Tuple[float, float]:
         """
         Calculate the point of regard on the screen.
@@ -53,6 +53,7 @@ class InterpolationAgent(CalibrationAgent):
         head_y: float,
         theta: float,
         phi: float,
+        face_width=None,
     ):
         """
         Add a calibration point during the calibration process.
@@ -64,7 +65,7 @@ class InterpolationAgent(CalibrationAgent):
             phi (float): Vertical gaze angle.
         """
         self.calibration_map.add_calibration_point(
-            monitor_x, monitor_y, head_x, head_y, theta, phi
+            monitor_x, monitor_y, head_x, head_y, theta, phi, face_width
         )
 
     def _interpolate(
@@ -108,7 +109,7 @@ class InterpolationAgent(CalibrationAgent):
         return numerator / sum(weights)
 
     def calculate_point_of_regard(
-        self, head_x: float, head_y: float, theta: float, phi: float
+        self, head_x: float, head_y: float, theta: float, phi: float, face_width=None
     ) -> Tuple[float, float]:
         """
         Calculate the screen coordinates for a given gaze angle.
@@ -155,6 +156,12 @@ class LinearCalibrationAgent(CalibrationAgent):
       rotated camera is absorbed by the fit.
     - Huber-weighted least squares: a calibration dot where the user blinked or looked away
       is down-weighted instead of skewing the whole fit.
+    - Distance: ``1/face_width`` (face width in the camera image, inversely proportional to
+      distance) is a third feature when every calibration point has one. Leaning in or out
+      changes how far a given gaze angle travels across the screen. On the benchmark the
+      error correlated with distance changes (r=0.65 on three monitors), and the term cut
+      burst p90 error 456 -> 377 px (single) and 593 -> 564 px (three monitors). Profiles
+      without face widths fit angles only; ``use_distance=False`` switches it off.
     - Predictions are clamped to the area spanned by the calibration targets: the user is
       looking at the screen, and gaze outside the calibrated area can't be attributed to
       anything reliably.
@@ -164,7 +171,14 @@ class LinearCalibrationAgent(CalibrationAgent):
     map changes.
     """
 
-    def __init__(self, huber_delta: float = 1.0, ridge: float = 1e-3, iterations: int = 20):
+    def __init__(
+        self,
+        huber_delta: float = 1.0,
+        ridge: float = 1e-3,
+        iterations: int = 20,
+        use_distance: bool = True,
+    ):
+        self.use_distance = use_distance
         self.huber_delta = huber_delta
         self.ridge = ridge
         self.iterations = iterations
@@ -190,9 +204,10 @@ class LinearCalibrationAgent(CalibrationAgent):
         head_y: float,
         theta: float,
         phi: float,
+        face_width=None,
     ):
         self.calibration_map.add_calibration_point(
-            monitor_x, monitor_y, head_x, head_y, theta, phi
+            monitor_x, monitor_y, head_x, head_y, theta, phi, face_width
         )
         self._model = None
 
@@ -202,7 +217,12 @@ class LinearCalibrationAgent(CalibrationAgent):
         m = self.calibration_map
         if not m.theta_values:
             raise NotCalibratedError("no calibration points")
-        X = np.column_stack([m.theta_values, m.phi_values]).astype(float)
+        widths = m.face_widths()
+        with_distance = self.use_distance and all(w for w in widths)
+        columns = [m.theta_values, m.phi_values]
+        if with_distance:
+            columns.append([1.0 / w for w in widths])
+        X = np.column_stack(columns).astype(float)
         y = np.column_stack([m.monitor_x_values, m.monitor_y_values]).astype(float)
 
         mean = X.mean(axis=0)
@@ -223,18 +243,25 @@ class LinearCalibrationAgent(CalibrationAgent):
             u = residual / (self.huber_delta * scale)
             weights = 1.0 / np.maximum(u, 1.0)  # Huber: 1 inside delta, 1/u beyond
 
-        self._model = (mean, std, coef, y.min(axis=0), y.max(axis=0))
+        self._model = (mean, std, coef, y.min(axis=0), y.max(axis=0), with_distance)
 
     def calculate_point_of_regard(
-        self, head_x: float, head_y: float, theta: float, phi: float
+        self, head_x: float, head_y: float, theta: float, phi: float, face_width=None
     ) -> Tuple[float, float]:
-        """Screen coordinates for the given gaze angles. Head position is accepted but unused."""
+        """Screen coordinates for the given gaze angles (and distance, via face width).
+
+        Head position is accepted but unused. Without a face width (or with a profile
+        recorded before face widths were stored) the fit uses the gaze angles only.
+        """
         if theta is None or phi is None:
             raise TypeError("no gaze angles (no face detected)")
         if self._model is None:
             self._fit()
-        mean, std, coef, lo, hi = self._model
+        mean, std, coef, lo, hi, with_distance = self._model
         features = [1.0, (theta - mean[0]) / std[0], (phi - mean[1]) / std[1]]
+        if with_distance:
+            # A missing width counts as the calibration average distance (feature 0).
+            features.append((1.0 / face_width - mean[2]) / std[2] if face_width else 0.0)
         x = sum(f * c for f, c in zip(features, coef[:, 0]))
         y = sum(f * c for f, c in zip(features, coef[:, 1]))
         return (
