@@ -52,7 +52,7 @@ Why the switch (attention-benchmark, see `../docs/IMPROVEMENTS.md` 3.1): median 
 - averaging calibration frames and polynomial terms didn't help;
 - about 290 px (leave-one-out) is the single-frame precision ceiling of this camera (640×480, face ~120 px wide) and model.
 
-**Distance:** the predictor also reports face width (`predict_gaze_features`), stored per calibration point (`CalibrationMap.face_widths()`, padded with `None` for profiles saved before it existed). The linear agent adds `1/face_width` as a third feature when every point has a width, otherwise angles only. Burst benchmark: single 294/456 → 265/377 px median/p90, three monitors 277/593 → 271/564 px. Recalibrate to benefit; `CALIBRATION_DISTANCE_TERM=0` restores angles only exactly.
+**Distance:** the predictor also reports face width as a fraction of the image width, so it's resolution-independent (`predict_gaze_features`), stored per calibration point (`CalibrationMap.face_widths()`, padded with `None` for profiles saved before it existed). The linear agent adds `1/face_width` as a third feature when every point has a width, otherwise angles only. Burst benchmark: single 294/456 → 265/377 px median/p90, three monitors 277/593 → 271/564 px. Recalibrate to benefit; `CALIBRATION_DISTANCE_TERM=0` restores angles only exactly.
 
 **Bursts:** `VisionTrackingEngine.predict_from_frames` averages head position and angles over the frames with a face, then maps once. 3 frames: median 295→277 px and right monitor 80→83% (three monitors); single monitor p90 485→456 px. Averaging features beat the median of per-frame predictions; averaging calibration frames (3.4) gave nothing and isn't implemented.
 
