@@ -89,14 +89,19 @@ def test_no_face_returns_nones():
 
 
 def test_reports_face_width_as_a_distance_cue():
-    """``predict_gaze_features`` adds the face box width in pixels.
+    """``predict_gaze_features`` adds the face box width as a fraction of the image width.
 
     Why: face width shrinks as the user leans back. It is the calibration's distance cue,
-    the only one available from a single webcam frame without camera calibration.
+    the only one available from a single webcam frame without camera calibration. As a
+    fraction it doesn't change with camera resolution (the webcam service moved from
+    640x480 to 1280x720), so profiles stay valid across resolutions.
     """
     predictor = predictor_returning(l2cs_result([[100, 50, 230, 150]], [0.1], [0.2]))
+    large = np.zeros((960, 1280, 3), dtype=np.uint8)
+    predictor_large = predictor_returning(l2cs_result([[200, 100, 460, 300]], [0.1], [0.2]))
 
     features = predictor.predict_gaze_features(IMAGE)
 
-    assert features[4] == pytest.approx(130)
+    assert features[4] == pytest.approx(130 / 640)
+    assert predictor_large.predict_gaze_features(large)[4] == pytest.approx(features[4])
     assert predictor.predict_gaze_vector(IMAGE) == features[:4]
