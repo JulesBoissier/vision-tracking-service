@@ -18,8 +18,13 @@ RUN pip install --upgrade pip
 # Copy requirements file first (for better caching)
 COPY requirements.txt .
 
-# Install remaining dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install dependencies. Torch comes from PyTorch's CPU-only index: the service runs on CPU,
+# and the default (CUDA) wheels were ~2x slower here for identical predictions, besides
+# adding ~2 GB of CUDA libraries. Pinned torch versions resolve to their "+cpu" builds.
+RUN pip install --no-cache-dir \
+        --index-url https://download.pytorch.org/whl/cpu \
+        --extra-index-url https://pypi.org/simple \
+        -r requirements.txt
 
 # Calibration profiles live in /app/data, the only directory docker-compose mounts a
 # volume on. The code under /app comes from the image, so rebuilding updates it.
