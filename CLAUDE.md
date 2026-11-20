@@ -29,7 +29,7 @@ pytest tests/
 pytest tests/test_linear_calibration_agent.py::test_one_bad_calibration_dot_has_little_influence
 ```
 
-CI (`.github/workflows/python-ci.yml`) runs `pytest tests/` on Python 3.12 for pushes/PRs to `main` and `develop`. The Docker image uses Python 3.10.
+CI (`.github/workflows/python-ci.yml`) runs `pytest tests/` on Python 3.12 for pushes/PRs to `main` and `develop`. The Docker image uses Python 3.10 and installs torch from PyTorch's CPU-only index (identical predictions, faster on CPU, 2.6 GB instead of 10 GB).
 
 ## Tests
 
@@ -37,7 +37,7 @@ Tests cover behaviour at three levels: the calibration agents (calibration maths
 
 ## API
 
-`GET /health`, `POST /cal_point` (form `x`, `y`, `file`), `POST /predict` (form `file`) → `{"prediction": [x, y]}`, `POST /save_profile?name=`, `GET /list_profiles`, `POST /load_profile?profile_id=` (404 if unknown; the active calibration is kept), `POST /delete_profile?profile_id=`, `POST /reset_profile`. These shapes are a contract with the orchestrator — change both repos together.
+`GET /health`, `POST /cal_point` (form `x`, `y`, `file`), `POST /predict` (form `file`, repeatable: several frames are averaged into one prediction; 400 if a part isn't an image) → `{"prediction": [x, y]}`, `POST /save_profile?name=`, `GET /list_profiles`, `POST /load_profile?profile_id=` (404 if unknown; the active calibration is kept), `POST /delete_profile?profile_id=`, `POST /reset_profile`. These shapes are a contract with the orchestrator — change both repos together.
 
 ## How prediction works
 
@@ -51,6 +51,8 @@ Why the switch (attention-benchmark, see `../docs/IMPROVEMENTS.md` 3.1): median 
 - head-position features break when posture changes between calibration and use;
 - averaging calibration frames and polynomial terms didn't help;
 - about 290 px (leave-one-out) is the single-frame precision ceiling of this camera (640×480, face ~120 px wide) and model.
+
+**Bursts:** `VisionTrackingEngine.predict_from_frames` averages head position and angles over the frames with a face, then maps once. 3 frames: median 295→277 px and right monitor 80→83% (three monitors); single monitor p90 485→456 px. Averaging features beat the median of per-frame predictions; averaging calibration frames (3.4) gave nothing and isn't implemented.
 
 Further gains need better inputs, not a better calibration fit: multi-frame bursts at prediction time, a higher camera resolution, or a stronger gaze model.
 

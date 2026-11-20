@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from typing import Optional
+from typing import List, Optional
 
 import cv2
 import numpy as np
@@ -126,19 +126,20 @@ async def add_calibration_point(
 
 @router.post("/predict")
 async def predict_point_of_regard(
-    file: UploadFile = File(...),  # Accept the uploaded image
+    # One or more JPEG frames, all as multipart fields named "file". Several frames (a
+    # short burst) are combined into one prediction; a single frame works as always.
+    file: List[UploadFile] = File(...),
     vision_engine: VisionTrackingEngine = Depends(get_engine),
 ):
-    # Read the uploaded file's content as bytes
-    image_bytes = await file.read()
+    frames = []
+    for upload in file:
+        image_bytes = await upload.read()
+        frame = cv2.imdecode(np.frombuffer(image_bytes, np.uint8), cv2.IMREAD_COLOR)
+        if frame is None:
+            raise HTTPException(status_code=400, detail=f"{upload.filename} is not a decodable image")
+        frames.append(frame)
 
-    # Convert bytes to a NumPy array
-    nparr = np.frombuffer(image_bytes, np.uint8)
-
-    # Decode the image array into an OpenCV image (BGR format)
-    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-    predictions = vision_engine.predict_gaze_position(frame)
+    predictions = vision_engine.predict_from_frames(frames)
 
     return GazePredictionResponse(prediction=predictions)
 

@@ -148,3 +148,34 @@ def test_loading_unknown_profile_is_not_found_and_harmless(api, fake_predictor):
     assert api.post("/predict", files=upload(make_frame(20))).json()["prediction"] == pytest.approx(
         [1920, 0], abs=1
     )
+
+
+def test_predict_accepts_a_burst_of_frames(api, fake_predictor):
+    """``/predict`` with several ``file`` parts returns one prediction from all of them.
+
+    Why: the orchestrator sends a short burst per tick (several frames, one request, one
+    answer). Older clients sending a single ``file`` are unaffected.
+    """
+    calibrate(api, fake_predictor)
+    files = [
+        ("file", ("a.jpg", jpeg(make_frame(10)), "image/jpeg")),
+        ("file", ("b.jpg", jpeg(make_frame(20)), "image/jpeg")),
+    ]
+
+    r = api.post("/predict", files=files)
+
+    assert r.status_code == 200
+    assert r.json()["prediction"] == pytest.approx([960, 0], abs=1)
+
+
+def test_undecodable_frame_is_a_client_error(api, fake_predictor):
+    """A part that isn't an image answers 400 instead of failing inside the model.
+
+    Why: a corrupt upload is the client's problem and should say so, not look like a
+    server crash.
+    """
+    calibrate(api, fake_predictor)
+
+    r = api.post("/predict", files={"file": ("x.jpg", b"not a jpeg", "image/jpeg")})
+
+    assert r.status_code == 400
