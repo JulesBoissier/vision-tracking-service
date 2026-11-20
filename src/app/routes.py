@@ -22,7 +22,11 @@ def build_engine(settings: Settings) -> VisionTrackingEngine:
     agent = (
         InterpolationAgent()
         if settings.calibration_agent == "idw"
-        else LinearCalibrationAgent(use_distance=settings.calibration_distance_term)
+        else LinearCalibrationAgent(
+            use_distance=settings.calibration_distance_term,
+            implicit_max=settings.implicit_calibration_max,
+            implicit_weight=settings.implicit_calibration_weight,
+        )
     )
     return VisionTrackingEngine(
         GazePredictor(filepath=settings.model_path),
@@ -107,19 +111,22 @@ def reset_calibration_profile(vision_engine: VisionTrackingEngine = Depends(get_
 async def add_calibration_point(
     x: float = Form(...),  # Explicitly define x as a form field
     y: float = Form(...),  # Explicitly define y as a form field
-    file: UploadFile = File(...),  # Accept the uploaded image
+    # One or more JPEG frames ("file" may repeat: a burst's features are averaged).
+    file: List[UploadFile] = File(...),
+    # true: evidence gathered during use (a click), kept per session and not saved.
+    implicit: bool = Form(False),
     vision_engine: VisionTrackingEngine = Depends(get_engine),
 ):
-    # Read the uploaded file's content as bytes
-    image_bytes = await file.read()
+    frames = []
+    for upload in file:
+        frame = cv2.imdecode(np.frombuffer(await upload.read(), np.uint8), cv2.IMREAD_COLOR)
+        if frame is None:
+            raise HTTPException(status_code=400, detail=f"{upload.filename} is not a decodable image")
+        frames.append(frame)
 
-    # Convert bytes to a NumPy array
-    nparr = np.frombuffer(image_bytes, np.uint8)
-
-    # Decode the image array into an OpenCV image (BGR format)
-    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-    added = vision_engine.run_single_calibration_step(x, y, frame)
+    if implicit and not vision_engine.cal_agent.supports_implicit:
+        return {"message": "The active calibration agent doesn't use implicit points.", "added": False}
+    added = vision_engine.run_single_calibration_step(x, y, frames, implicit=implicit)
     if not added:
         return {"message": "No face detected; calibration point skipped.", "added": False}
     return {

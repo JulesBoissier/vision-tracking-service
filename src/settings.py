@@ -15,6 +15,9 @@ class Settings:
     calibration_db_url: str = "sqlite:///calibration.db"
     # Linear agent: use face width (distance to the camera) as a calibration feature.
     calibration_distance_term: bool = True
+    # Implicit calibration points (clicks) kept per session, and their weight in the fit.
+    implicit_calibration_max: int = 50
+    implicit_calibration_weight: float = 1.0
 
     @classmethod
     def from_env(cls, env: Optional[Mapping[str, str]] = None) -> "Settings":
@@ -25,4 +28,8 @@ class Settings:
             calibration_db_url=env.get("CALIBRATION_DB_URL", cls.calibration_db_url),
             calibration_distance_term=env.get("CALIBRATION_DISTANCE_TERM", "1").strip().lower()
             not in ("0", "false", "no", "off"),
+            implicit_calibration_max=int(env.get("IMPLICIT_CALIBRATION_MAX", cls.implicit_calibration_max)),
+            implicit_calibration_weight=float(
+                env.get("IMPLICIT_CALIBRATION_WEIGHT", cls.implicit_calibration_weight)
+            ),
         )

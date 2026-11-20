@@ -258,3 +258,78 @@ def test_missing_face_width_at_prediction_counts_as_average_distance():
     assert agent.calculate_point_of_regard(320, 240, 0.0, 0.0) == pytest.approx(
         agent.calculate_point_of_regard(320, 240, 0.0, 0.0, face_width=mean_width), abs=1
     )
+
+
+# --- implicit calibration points (clicks) ------------------------------------------------
+
+def shifted_screen(theta, phi):
+    """Where the user really looks after a posture change: the calibration is 80 px off."""
+    x, y = true_screen(theta, phi)
+    return x + 80, y - 60
+
+
+def test_implicit_points_pull_the_fit_toward_where_the_user_really_looks():
+    """Clicks recorded after a posture change correct predictions in the area around them.
+
+    Why: people look where they click, so each click is a calibration point gathered
+    during use. They let the fit follow posture changes after the explicit calibration
+    (on the multi-monitor benchmark, p90 error 564 -> 511-526 px in simulation).
+    """
+    agent = calibrated(grid())
+    before = agent.calculate_point_of_regard(320, 240, 0.1, 0.05)
+    for theta, phi in [(-0.3, -0.2), (0.3, -0.2), (-0.3, 0.2), (0.3, 0.2), (0.0, 0.0), (0.1, 0.1)] * 3:
+        x, y = shifted_screen(theta, phi)
+        agent.add_implicit_point(x, y, 320, 240, theta, phi)
+
+    after = agent.calculate_point_of_regard(320, 240, 0.1, 0.05)
+    truth = shifted_screen(0.1, 0.05)
+    # Robust weighting still balances clicks against the explicit calibration, so the
+    # correction is partial; it must be clear.
+    assert abs(after[0] - truth[0]) < 0.7 * abs(before[0] - truth[0])
+
+
+def test_implicit_points_are_capped_oldest_first():
+    """Only the most recent ``implicit_max`` implicit points are kept.
+
+    Why: the fit should follow the user's current posture, and the explicit calibration
+    must not be drowned by hours of clicks.
+    """
+    agent = LinearCalibrationAgent(implicit_max=5)
+    for p in grid():
+        agent.calibration_step(*p)
+    for i in range(12):
+        agent.add_implicit_point(100 + i, 100, 320, 240, 0.0, 0.0)
+
+    assert agent.implicit_count == 5
+
+
+def test_zero_weight_implicit_points_change_nothing():
+    """With ``implicit_weight=0`` the fit is exactly the explicit calibration.
+
+    Why: the weight is the knob that trades trust in clicks against trust in the
+    deliberate calibration; 0 must mean "ignore them".
+    """
+    reference = calibrated(grid())
+    agent = calibrated(grid(), implicit_weight=0.0)
+    agent.add_implicit_point(1900, 1100, 320, 240, -0.3, -0.2)
+
+    assert agent.calculate_point_of_regard(320, 240, 0.1, 0.1) == pytest.approx(
+        reference.calculate_point_of_regard(320, 240, 0.1, 0.1)
+    )
+
+
+def test_implicit_points_belong_to_the_session():
+    """Implicit points are dropped on reset or profile load, and never stored in the calibration map.
+
+    Why: clicks reflect the current session's posture. Saving them in a profile would
+    carry today's posture into tomorrow's calibration.
+    """
+    agent = calibrated(grid())
+    agent.add_implicit_point(500, 500, 320, 240, 0.0, 0.0)
+
+    assert len(agent.calibration_map.theta_values) == len(grid())
+    agent.calibration_map = agent.calibration_map  # what loading a profile does
+    assert agent.implicit_count == 0
+    agent.add_implicit_point(500, 500, 320, 240, 0.0, 0.0)
+    agent.initialize_cal_map()
+    assert agent.implicit_count == 0
