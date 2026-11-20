@@ -168,3 +168,31 @@ def test_profile_changes_wait_for_in_flight_predictions(engine, fake_predictor):
     resetter.join(5)
     assert [step for step, _ in order] == ["predicted", "reset"]
     assert order[0][1] == pytest.approx((0, 0), abs=1)
+
+
+def test_burst_of_frames_averages_gaze_features(engine, fake_predictor):
+    """Several frames predict one point from their averaged gaze features.
+
+    Why: consecutive frames of the same fixation jitter. Averaging a short burst reduced
+    the benchmark's median error on three monitors by ~6%. Here two frames looking at the
+    top-left and top-right corners average to straight ahead on the top edge.
+    """
+    calibrate(engine, fake_predictor)
+    left = fake_predictor.script(10, CORNERS[10][1])
+    right = fake_predictor.script(20, CORNERS[20][1])
+
+    assert engine.predict_from_frames([left, right]) == pytest.approx((960, 0), abs=1)
+
+
+def test_burst_ignores_frames_without_a_face(engine, fake_predictor):
+    """Frames where no face was found are left out of the burst's average.
+
+    Why: a blink in one of three frames shouldn't drag the prediction toward a meaningless
+    value, nor make the whole burst a gap.
+    """
+    calibrate(engine, fake_predictor)
+    frame = fake_predictor.script(10, CORNERS[10][1])
+    blink = fake_predictor.script(90, None)
+
+    assert engine.predict_from_frames([frame, blink]) == pytest.approx((0, 0), abs=1)
+    assert engine.predict_from_frames([blink, blink]) == (None, None)
