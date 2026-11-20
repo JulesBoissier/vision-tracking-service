@@ -62,26 +62,47 @@ class VisionTrackingEngine:
     def delete_profile(self, id):
         self.cps.delete_profile(id)
 
-    def run_single_calibration_step(
-        self, screen_x: float, screen_y: float, frame: np.ndarray
-    ) -> bool:
+    def run_single_calibration_step(self, screen_x: float, screen_y: float, frame, implicit: bool = False) -> bool:
         """
         Add one calibration point: the user was looking at (screen_x, screen_y) in ``frame``.
+
+        ``frame`` may be one image or a burst (list); a burst's gaze features are averaged.
+        ``implicit=True`` marks evidence gathered during use (a click) rather than an
+        explicit calibration dot: it goes to the agent's per-session implicit pool, isn't
+        saved in the profile, and is refused (False) by agents that don't support it.
 
         Frames where no face is detected are skipped, because a point without gaze features
         would make every later prediction fail.
 
         Returns:
-            bool: True if the point was added, False if no face was found.
+            bool: True if the point was added.
         """
-        head_x, head_y, theta, phi, face_width = self.gaze_predictor.predict_gaze_features(frame)
-        if theta is None or phi is None:
+        features = self._average_features(frame if isinstance(frame, list) else [frame])
+        if features is None:
             return False
+        head_x, head_y, theta, phi, face_width = features
         with self._lock:
-            self.cal_agent.calibration_step(
-                screen_x, screen_y, head_x, head_y, theta, phi, face_width=face_width
-            )
+            if implicit:
+                if not self.cal_agent.supports_implicit:
+                    return False
+                self.cal_agent.add_implicit_point(
+                    screen_x, screen_y, head_x, head_y, theta, phi, face_width=face_width
+                )
+            else:
+                self.cal_agent.calibration_step(
+                    screen_x, screen_y, head_x, head_y, theta, phi, face_width=face_width
+                )
         return True
+
+    def _average_features(self, frames):
+        """Mean ``(head_x, head_y, theta, phi, face_width)`` over frames with a face, or None."""
+        features = [self.gaze_predictor.predict_gaze_features(f) for f in frames]
+        features = [f for f in features if f[2] is not None and f[3] is not None]
+        if not features:
+            return None
+        head_x, head_y, theta, phi = (float(np.mean([f[i] for f in features])) for i in range(4))
+        widths = [f[4] for f in features if f[4]]
+        return head_x, head_y, theta, phi, (float(np.mean(widths)) if widths else None)
 
     def run_calibration_steps(
         self, calibration_data: List[Tuple[int, int, np.ndarray]]
@@ -117,15 +138,10 @@ class VisionTrackingEngine:
 
         Returns ``(None, None)`` when no frame has a face or nothing is calibrated.
         """
-        features = [self.gaze_predictor.predict_gaze_features(f) for f in frames]
-        features = [f for f in features if f[2] is not None and f[3] is not None]
-        if not features:
+        features = self._average_features(frames)
+        if features is None:
             return None, None  # no face detected in any frame
-        head_x, head_y, theta, phi = (
-            float(np.mean([f[i] for f in features])) for i in range(4)
-        )
-        widths = [f[4] for f in features if f[4]]
-        face_width = float(np.mean(widths)) if widths else None
+        head_x, head_y, theta, phi, face_width = features
 
         try:
             with self._lock:

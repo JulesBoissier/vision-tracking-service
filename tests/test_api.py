@@ -179,3 +179,26 @@ def test_undecodable_frame_is_a_client_error(api, fake_predictor):
     r = api.post("/predict", files={"file": ("x.jpg", b"not a jpeg", "image/jpeg")})
 
     assert r.status_code == 400
+
+
+def test_implicit_calibration_point_is_used_but_not_saved(api, fake_predictor):
+    """``/cal_point`` with ``implicit=true`` (and a burst of frames) is accepted but never saved in a profile.
+
+    Why: the orchestrator sends clicks as implicit points. They must influence the
+    current session only: a profile saved afterwards contains only the deliberate
+    calibration.
+    """
+    calibrate(api, fake_predictor)
+    api.post("/save_profile", params={"name": "desk"})
+    click = fake_predictor.script(60, (320, 240, 0.0, 0.0))
+    files = [("file", ("a.jpg", jpeg(click), "image/jpeg")), ("file", ("b.jpg", jpeg(click), "image/jpeg"))]
+
+    r = api.post("/cal_point", data={"x": 1500, "y": 900, "implicit": "true"}, files=files)
+    api.post("/save_profile", params={"name": "after-click"})
+    profiles = {p["profile_name"]: p["id"] for p in api.get("/list_profiles").json()["profiles"]}
+    api.post("/load_profile", params={"profile_id": profiles["after-click"]})
+    restored = api.post("/predict", files=upload(make_frame(60))).json()["prediction"]
+
+    assert r.json()["added"] is True
+    # The saved profile holds only the 4 explicit points, which map these angles to centre.
+    assert restored == pytest.approx([960, 540], abs=1)

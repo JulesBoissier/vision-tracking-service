@@ -21,6 +21,8 @@ def test_settings_defaults_and_environment():
     assert Settings.from_env({}) == Settings()
     assert Settings.from_env({"CALIBRATION_DISTANCE_TERM": "0"}).calibration_distance_term is False
     assert Settings().calibration_distance_term is True
+    implicit = Settings.from_env({"IMPLICIT_CALIBRATION_MAX": "10", "IMPLICIT_CALIBRATION_WEIGHT": "0.5"})
+    assert (implicit.implicit_calibration_max, implicit.implicit_calibration_weight) == (10, 0.5)
     s = Settings.from_env(
         {"CALIBRATION_AGENT": "IDW", "MODEL_PATH": "/m.pkl", "CALIBRATION_DB_URL": "sqlite:////d/c.db"}
     )

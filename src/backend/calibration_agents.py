@@ -10,6 +10,15 @@ class CalibrationAgent(ABC):
     Abstract base class for calibration agents.
     """
 
+    # Whether this agent accepts implicit calibration points (e.g. from clicks).
+    supports_implicit = False
+
+    def add_implicit_point(self, *args, **kwargs):
+        raise NotImplementedError(f"{type(self).__name__} doesn't use implicit calibration points")
+
+    def clear_implicit_points(self):
+        pass
+
     @abstractmethod
     def calculate_point_of_regard(
         self, head_x: float, head_y: float, theta: float, phi: float, face_width=None
@@ -177,8 +186,17 @@ class LinearCalibrationAgent(CalibrationAgent):
         ridge: float = 1e-3,
         iterations: int = 20,
         use_distance: bool = True,
+        implicit_max: int = 50,
+        implicit_weight: float = 1.0,
     ):
+        from collections import deque
+
         self.use_distance = use_distance
+        # Implicit points (e.g. clicks) are per session: never saved in the profile, and
+        # dropped when the calibration map is reset or replaced. Oldest go first, so the fit
+        # follows the user's current posture.
+        self._implicit = deque(maxlen=max(0, int(implicit_max)))
+        self.implicit_weight = float(implicit_weight)
         self.huber_delta = huber_delta
         self.ridge = ridge
         self.iterations = iterations
@@ -191,7 +209,22 @@ class LinearCalibrationAgent(CalibrationAgent):
     @calibration_map.setter
     def calibration_map(self, value: CalibrationMap):
         self._calibration_map = value
+        self.clear_implicit_points()  # they belonged to the previous profile/session
+
+    supports_implicit = True
+
+    def add_implicit_point(self, monitor_x, monitor_y, head_x, head_y, theta, phi, face_width=None):
+        """Add a calibration point from implicit evidence (the user clicked at this position)."""
+        self._implicit.append((monitor_x, monitor_y, theta, phi, face_width))
         self._model = None
+
+    def clear_implicit_points(self):
+        self._implicit.clear()
+        self._model = None
+
+    @property
+    def implicit_count(self) -> int:
+        return len(self._implicit)
 
     def initialize_cal_map(self):
         self.calibration_map = CalibrationMap()
@@ -217,13 +250,21 @@ class LinearCalibrationAgent(CalibrationAgent):
         m = self.calibration_map
         if not m.theta_values:
             raise NotCalibratedError("no calibration points")
-        widths = m.face_widths()
+        implicit = list(self._implicit)
+        thetas = list(m.theta_values) + [p[2] for p in implicit]
+        phis = list(m.phi_values) + [p[3] for p in implicit]
+        widths = list(m.face_widths()) + [p[4] for p in implicit]
+        targets_x = list(m.monitor_x_values) + [p[0] for p in implicit]
+        targets_y = list(m.monitor_y_values) + [p[1] for p in implicit]
+        # Explicit calibration points weigh 1, implicit ones implicit_weight.
+        prior = np.array([1.0] * len(m.theta_values) + [self.implicit_weight] * len(implicit))
+
         with_distance = self.use_distance and all(w for w in widths)
-        columns = [m.theta_values, m.phi_values]
+        columns = [thetas, phis]
         if with_distance:
             columns.append([1.0 / w for w in widths])
         X = np.column_stack(columns).astype(float)
-        y = np.column_stack([m.monitor_x_values, m.monitor_y_values]).astype(float)
+        y = np.column_stack([targets_x, targets_y]).astype(float)
 
         mean = X.mean(axis=0)
         std = X.std(axis=0)
@@ -232,7 +273,7 @@ class LinearCalibrationAgent(CalibrationAgent):
         reg = self.ridge * np.eye(A.shape[1])
         reg[0, 0] = 0.0  # don't shrink the intercept
 
-        weights = np.ones(len(X))
+        weights = prior.copy()
         for _ in range(self.iterations):
             Aw = A * weights[:, None]
             coef = np.linalg.solve(A.T @ Aw + reg, Aw.T @ y)
@@ -241,7 +282,7 @@ class LinearCalibrationAgent(CalibrationAgent):
             if scale < 1e-9:
                 break
             u = residual / (self.huber_delta * scale)
-            weights = 1.0 / np.maximum(u, 1.0)  # Huber: 1 inside delta, 1/u beyond
+            weights = prior / np.maximum(u, 1.0)  # Huber: 1 inside delta, 1/u beyond
 
         self._model = (mean, std, coef, y.min(axis=0), y.max(axis=0), with_distance)
 
