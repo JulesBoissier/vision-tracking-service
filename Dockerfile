@@ -21,8 +21,10 @@ COPY requirements.txt .
 # Install remaining dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Write the databse file
-RUN touch /app/calibration.db
+# Calibration profiles live in /app/data, the only directory docker-compose mounts a
+# volume on. The code under /app comes from the image, so rebuilding updates it.
+RUN mkdir -p /app/data
+ENV CALIBRATION_DB_URL=sqlite:////app/data/calibration.db
 
 # Copy the entire project into the container
 COPY . .

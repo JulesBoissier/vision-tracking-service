@@ -5,7 +5,11 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - sqlite_data:/app  # Use a Docker volume for persistence
+      # Only the data directory is persistent. Mounting the volume over all of /app (as
+      # before v2.2) hid the new image's code behind the volume's old copy after the first
+      # run. Existing volumes keep working: their calibration.db sits at the volume root,
+      # which is /app/data/calibration.db here, so saved profiles carry over.
+      - sqlite_data:/app/data
     restart: always
 
 volumes:
